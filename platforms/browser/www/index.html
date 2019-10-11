@@ -560,7 +560,7 @@
 	  
 	<ons-list>
     <ons-list-item>
-        <div class="left" style="width:60px;"> <ons-input type="text" name="moobile_prefix" id="moobile_prefix" class="moobile_prefix" required  placeholder="Prefix" float value="+63" onclick="showMobileCode()" ></ons-input> </div>
+        <div class="left" style="width:60px;"> <ons-input type="text" name="moobile_prefix" id="moobile_prefix" class="moobile_prefix" required  placeholder="Prefix" float value="+1268" onclick="showMobileCode()" ></ons-input> </div>
         <div class="center"> <ons-input type="number" value="" maxlength="15" name="mobile_no" id="mobile_no" required class="mobile_no"  placeholder="Mobile no." float ></ons-input> </div>
     </ons-list-item>
 	<ons-list>
@@ -703,7 +703,7 @@
   
 <div class="map_wrapper" id="map_location"></div> 
 
-<form id="frm_searchbylat" class="frm_searchbylat" method="POST">
+<form id="frm_searchbylat" class="frm_address" method="POST">
   <input type="hidden" name="lat" id="lat" class="lat">
   <input type="hidden" name="lng" id="lng" class="lng">   
   <input type="hidden" name="recent_search_address" id="recent_search_address" class="recent_search_address">
@@ -790,23 +790,7 @@
        </div>
     </ons-list-item>
     
-    <ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="state" id="state" class="state" required  modifier="transparent" placeholder="State" float></ons-input>
-       </div>
-    </ons-list-item>
     
-    <ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="zipcode" id="zipcode" class="zipcode" required  modifier="transparent" placeholder="Zip Code" float></ons-input>
-       </div>
-    </ons-list-item>
-	
-	<ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="location_name" id="location_name" class="location_name" required  modifier="transparent" placeholder="Floor/unit/Room #" float></ons-input>
-       </div>
-    </ons-list-item>
            
   <ons-list>
 </div><!-- form_wrapper-->   
@@ -1781,9 +1765,30 @@ placeholder="Search for restaurant,food and cuisine" onclick="showPage('search_f
 
 
 <template id="address_form.html">
-  <ons-page id="address_form" modifier="" >  
+  <ons-page id="address_form" modifier="page_white" >  
 
-  <ons-back-button>Back</ons-back-button>
+ <div class="fixed_toolbar">
+  <ons-row>
+    <ons-col vertical-align="center">
+       <ons-back-button modifier="">Back</ons-back-button>
+    </ons-col>
+    <ons-col vertical-align="center" class="text-right">       
+       <ons-button modifier="quiet button_small">
+          <ons-icon class="rounded_white" icon="ion-android-locate"
+           size="28px" onclick="CurrentLocation();"></ons-icon>
+       </ons-button>
+    </ons-col>
+  </ons-row>
+  
+  <div class="identify_location_wrap">
+    <ons-button modifier="rounded_button no_shadow" onclick="identifyLocation();">
+    <span class="trn">IDENTIFY LOCATION</span>
+    </ons-button>
+  </div>
+</div> 
+	  
+
+	  
   <div class="map_half" id="map_address"></div>
 
   <form method="POST" id="frm_address" class="frm_address">  
@@ -1815,30 +1820,13 @@ placeholder="Search for restaurant,food and cuisine" onclick="showPage('search_f
        </div>
     </ons-list-item>
     
-    <ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="state" id="state" class="state" required  modifier="transparent" placeholder="State" float></ons-input>
-       </div>
-    </ons-list-item>
-    
-    <ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="zipcode" id="zipcode" class="zipcode" required  modifier="transparent" placeholder="Zip Code" float></ons-input>
-       </div>
-    </ons-list-item>
-    
+       
     <ons-list-item>       
        <div class="center country_list_wrap">         
          
        </div>
     </ons-list-item>
-    
-    <ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="location_name" id="location_name" class="location_name" required  modifier="transparent" placeholder="Floor/unit/Room #" float></ons-input>
-       </div>
-    </ons-list-item>
-    
+           
     <ons-list-item>       
        <div class="center">         
          <ons-input type="text" name="contact_phone" id="contact_phone" class="contact_phone" required 
@@ -1866,8 +1854,8 @@ placeholder="Search for restaurant,food and cuisine" onclick="showPage('search_f
     <ons-list-item>   
     </ons-list-item> 
   
-  <ons-list>   
-     
+  <ons-list>  
+	  
   </div>   <!--form_wrapper-->
   
   </form>
@@ -3073,29 +3061,13 @@ placeholder="Search for restaurant,food and cuisine" onclick="showPage('search_f
        </div>
     </ons-list-item>
     
-    <ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="state" id="state" class="state" required  modifier="transparent" placeholder="State" float></ons-input>
-       </div>
-    </ons-list-item>
-    
-    <ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="zipcode" id="zipcode" class="zipcode" required  modifier="transparent" placeholder="Zip Code" float></ons-input>
-       </div>
-    </ons-list-item>
-    
+   
     <ons-list-item>       
        <div class="center country_list_wrap">         
          
        </div>
     </ons-list-item>
-    
-    <ons-list-item>       
-       <div class="center">         
-         <ons-input type="text" name="location_name" id="location_name" class="location_name" required  modifier="transparent" placeholder="Floor/unit/Room #" float></ons-input>
-       </div>
-    </ons-list-item>
+ 
     
     
    <ons-list-item>       

@@ -703,7 +703,7 @@
   
 <div class="map_wrapper" id="map_location"></div> 
 
-<form id="frm_searchbylat" class="frm_searchbylat" method="POST">
+<form id="frm_searchbylat" class="frm_address" method="POST">
   <input type="hidden" name="lat" id="lat" class="lat">
   <input type="hidden" name="lng" id="lng" class="lng">   
   <input type="hidden" name="recent_search_address" id="recent_search_address" class="recent_search_address">
@@ -1765,9 +1765,30 @@ placeholder="Search for restaurant,food and cuisine" onclick="showPage('search_f
 
 
 <template id="address_form.html">
-  <ons-page id="address_form" modifier="" >  
+  <ons-page id="address_form" modifier="page_white" >  
 
-  <ons-back-button>Back</ons-back-button>
+ <div class="fixed_toolbar">
+  <ons-row>
+    <ons-col vertical-align="center">
+       <ons-back-button modifier="">Back</ons-back-button>
+    </ons-col>
+    <ons-col vertical-align="center" class="text-right">       
+       <ons-button modifier="quiet button_small">
+          <ons-icon class="rounded_white" icon="ion-android-locate"
+           size="28px" onclick="CurrentLocation();"></ons-icon>
+       </ons-button>
+    </ons-col>
+  </ons-row>
+  
+  <div class="identify_location_wrap">
+    <ons-button modifier="rounded_button no_shadow" onclick="identifyLocation();">
+    <span class="trn">IDENTIFY LOCATION</span>
+    </ons-button>
+  </div>
+</div> 
+	  
+
+	  
   <div class="map_half" id="map_address"></div>
 
   <form method="POST" id="frm_address" class="frm_address">  
@@ -1833,8 +1854,8 @@ placeholder="Search for restaurant,food and cuisine" onclick="showPage('search_f
     <ons-list-item>   
     </ons-list-item> 
   
-  <ons-list>   
-     
+  <ons-list>  
+	  
   </div>   <!--form_wrapper-->
   
   </form>
