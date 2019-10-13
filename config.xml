@@ -3,8 +3,8 @@
     xmlns:gap = "http://phonegap.com/ns/1.0"
     xmlns:android = "http://schemas.android.com/apk/res/android"
     id        = "com.paymeal"
-    versionCode = "1.0"
-    version   = "1.0">
+    versionCode = "1.1"
+    version   = "1.1">
     <name>PayMeal</name>
     <description>
         PayMeal
@@ -55,12 +55,12 @@
 	  <variable name="PLAY_SERVICES_VERSION" value="11.0.1" /> 
 	</gap:plugin>
 	
-    <!--       
+      
 	<gap:plugin name="cordova-plugin-facebook4" source="npm"  spec="5.0.0" >
-	  <variable name="APP_ID" value="" />
+	  <variable name="APP_ID" value="2716575325030499" />
 	  <variable name="APP_NAME" value="PayMeal" />
 	</gap:plugin>	
-	-->
+	
 		
 	<plugin name="uk.co.workingedge.phonegap.plugin.launchnavigator" source="npm" spec="5.0.4" >
        <variable name="GOOGLE_API_KEY_FOR_ANDROID" value="" />
@@ -78,8 +78,8 @@
 	</gap:plugin>
 		
 	<!--ENABLED THIS PLUGIN ONLY FOR IOS-->
-    <!--<gap:plugin name="cordova-plugin-ionic-webview" source="npm" spec="4.1.1" />
-    <gap:plugin name="cordova-plugin-ionic-keyboard" source="npm" spec="2.2.0" />-->
+   <gap:plugin name="cordova-plugin-ionic-webview" source="npm" spec="4.1.1" />
+    <gap:plugin name="cordova-plugin-ionic-keyboard" source="npm" spec="2.2.0" />
 	
 	<!--END OF PLUGIN-->
 	    	
@@ -127,8 +127,12 @@
 	</edit-config>
 	
 	<edit-config target="NSMicrophoneUsageDescription" file="*-Info.plist" mode="merge">
-      <string>need microphone access to record sounds</string>
+      <string>PayMeal need microphone access to record sounds</string>
     </edit-config>        
+    
+    <edit-config target="NSBluetoothAlwaysUsageDescription" file="*-Info.plist" mode="merge">
+      <string>This allows us to facilitate more accurately, keeping you in the loop about PayMeal.</string>
+    </edit-config>   
     
 	<platform name="android">
 		           
@@ -213,6 +217,7 @@
 		<splash height="2732" platform="ios" src="res/screens/ios/Default@2x~ipad~anyany.png" width="2732" />
 		<splash height="2732" platform="ios" src="res/screens/ios/Default@2x~ipad~comany.png" width="1278"  />
 		
+        
 				
 	</platform>  
  	       
