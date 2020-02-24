@@ -15,3 +15,7 @@ margin-bottom:-20px !important;
 .action-sheet--filter_sheet{
 height:500px !important;
 }
+
+ons-fab.fab--floating_category{
+bottom:90px !important;
+}

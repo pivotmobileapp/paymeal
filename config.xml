@@ -3,8 +3,8 @@
     xmlns:gap = "http://phonegap.com/ns/1.0"
     xmlns:android = "http://schemas.android.com/apk/res/android"
     id        = "com.paymeal"
-    versionCode = "1.2"
-    version   = "1.2">
+    versionCode = "1.3"
+    version   = "1.3">
     <name>PayMeal</name>
     <description>
         PayMeal
@@ -41,11 +41,17 @@
     </gap:plugin>
     
     <gap:plugin name="cordova-plugin-x-toast" source="npm" spec="2.7.0" />         
-        
-    <!--<gap:plugin spec="https://github.com/razorpay/razorpay-cordova.git#v1.4.3" source="git" />-->
+            
+    <!--ENABLED RAZOR PAY IF ONLY YOU NEED IT-->
+	<!--<gap:plugin spec="https://github.com/razorpay/razorpay-cordova.git#v1.4.3" source="git" />
+	<gap:plugin spec="https://github.com/razorpay/razorpay-cordova.git#v1.3.5" source="git" />-->
     
     <gap:plugin name="cordova-plugin-media" source="npm" spec="5.0.2" />
-    <gap:plugin name="cordova.plugins.diagnostic" source="npm" spec="4.0.0" />
+    
+    <!--WHEN COMPILING THE APP TO IOS USE cordova.plugins.diagnostic version 5.0.1 FOR ANDROID use 4.0.0-->
+    <!--<gap:plugin name="cordova.plugins.diagnostic" source="npm" spec="5.0.1" />-->
+    <gap:plugin name="cordova.plugins.diagnostic" source="npm" spec="5.0.1" />    
+    
     <gap:plugin name="cordova-plugin-buildinfo" source="npm" spec="2.0.1"  />
     <gap:plugin name="cordova-plugin-camera" source="npm" spec="2.4.1" />
     <gap:plugin name="cordova-plugin-file-transfer" source="npm" spec="1.7.1" /> 
@@ -54,8 +60,9 @@
 	  <variable name="REVERSED_CLIENT_ID" value="" />
 	  <variable name="PLAY_SERVICES_VERSION" value="11.0.1" /> 
 	</gap:plugin>
+       
+	<!--ENABLED FACEBOOK ONLY IF YOU HAVE APP ID-->
 	
-      
 	<gap:plugin name="cordova-plugin-facebook4" source="npm"  spec="5.0.0" >
 	  <variable name="APP_ID" value="2716575325030499" />
 	  <variable name="APP_NAME" value="PayMeal" />
@@ -77,10 +84,9 @@
 	   <variable name="PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION" value="PayMeal saves images of your photo library" /> 
 	</gap:plugin>
 		
-	<!--ENABLED THIS PLUGIN ONLY FOR IOS-->
-   <gap:plugin name="cordova-plugin-ionic-webview" source="npm" spec="4.1.1" />
-    <gap:plugin name="cordova-plugin-ionic-keyboard" source="npm" spec="2.2.0" />
-	
+    <!--REMOVE cordova-plugin-statusbar WHEN COMPILING TO IOS-->    
+    <!-- <gap:plugin name="cordova-plugin-statusbar" source="npm"  /> -->  
+		
 	<!--END OF PLUGIN-->
 	    	
     <access origin="*" />
@@ -95,7 +101,7 @@
 
     <platform name="ios">    
 	    <config-file platform="ios" target="*-Info.plist" parent="NSLocationAlwaysUsageDescription">
-	        <string>This allows us to use your location to provide you a nearby restaurant, and to facilitate more accurately, keeping you in the loop about Karenderia.</string>
+	        <string>This allows us to use your location to provide you a nearby restaurant, and to facilitate more accurately, keeping you in the loop about PayMeal.</string>
 	    </config-file>
 	    <config-file platform="ios" target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
 	        <string>This allows us to use your location to provide you a nearby restaurant, and to facilitate more accurately, keeping you in the loop about PayMeal.</string>
@@ -131,8 +137,12 @@
     </edit-config>        
     
     <edit-config target="NSBluetoothAlwaysUsageDescription" file="*-Info.plist" mode="merge">
-      <string>This allows us to facilitate more accurately, keeping you in the loop about PayMeal.</string>
-    </edit-config>   
+      <string>This allows us to facilitate more restaurant</string>
+    </edit-config>  
+    
+    <edit-config target="NSBluetoothPeripheralUsageDescription" file="*-Info.plist" mode="merge">
+      <string>Improve location accuracy when finding nearby restaurant</string>
+    </edit-config>  
     
 	<platform name="android">
 		           
@@ -217,7 +227,6 @@
 		<splash height="2732" platform="ios" src="res/screens/ios/Default@2x~ipad~anyany.png" width="2732" />
 		<splash height="2732" platform="ios" src="res/screens/ios/Default@2x~ipad~comany.png" width="1278"  />
 		
-        
 				
 	</platform>  
  	       
