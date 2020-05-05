@@ -92,7 +92,7 @@
 	</gap:plugin>
 		
     <!--REMOVE cordova-plugin-statusbar WHEN COMPILING TO IOS-->    
-   <gap:plugin name="cordova-plugin-statusbar" source="npm"  
+    <gap:plugin name="cordova-plugin-statusbar" source="npm"  />
 		
 	<!--END OF PLUGIN-->
 	    	
