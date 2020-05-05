@@ -13,7 +13,7 @@ formatFields = function(field_name, field_placeholder){
 tabbarMenu = function(){
 	
 	var html='';
-	html+='<ons-tabbar position="bottom" animation="none" >';
+	html+='<ons-tabbar position="bottom" animation="none" modifier="is_rtl" >';
 	    html+='<ons-tab page="home.html" label="'+ t("Near Me") +'" icon="ion-ios-location-outline" active  active-icon="ion-ios-location" >';
 	    html+='</ons-tab>';
 	    html+='<ons-tab page="search.html" label="'+ t("Search") +'" icon="ion-ios-search" active-icon="ion-search" >';
@@ -54,6 +54,11 @@ MerchantCarousel = function(data){
 			    
 			    html +='<div>';
 			    html +='<img class="hide" src="'+val.background_url+'">';
+			    
+			    if(val.is_sponsored==2){
+			       html +='<div class="ribbon"><span>'+ val.sponsored +'</span></div>';
+			    }
+			    
 			    html +='<div class="header_bg" style="background-image: url('+ "'" + val.background_url + "'" +')"  >';
 			      html +='<div class="spinner"></div>';			      
 			    html +='</div>';
@@ -73,11 +78,11 @@ MerchantCarousel = function(data){
 			       	  }
 			       	  x++;
 			       });			       
-			    } else {
-			       if(!empty(val.open_status_raw)){
+			    }
+			    
+			    if(!empty(val.open_status_raw)){
 			          html +='<div class="green_tag '+ val.open_status_raw +' ">'+ val.open_status +'</div>';
 			       }
-			    }
 			    
 			    //if(val.rating.ratings>0){
 			       //html +='<div class="rating_wrap"><ons-icon icon="ion-star" size="13px"></ons-icon> <span>'+val.rating.ratings+'</span></div>';
@@ -101,6 +106,19 @@ MerchantCarousel = function(data){
 		    	});
 		    	html +='<p class="bold">'+ offer_list  +'</p>';		
 		    }
+		    
+		    if( !empty(val.vouchers)){
+		    	voucher_list='';  xv=0;
+		    	$.each( val.vouchers  , function( key_voucher, val_voucher ) {
+		    		if(xv<=0){
+		    		   voucher_list+=val_voucher+'<br/>';
+		    		}
+		    		xv++;
+		    	});
+		    	if(!empty(voucher_list)){
+		    	   html +='<p class="bold">'+ voucher_list  +'</p>';		
+		    	}
+		    }		    
 		    
 		    /*rating*/
 		    if(!empty(val.rating)){
@@ -157,6 +175,7 @@ CuisineCarousel = function(data){
 restaurantList = function(data, element){
 	var list = document.getElementById(element);
 	html='';
+	
 	$.each(data, function(key, val){		
 		
 		html+='<ons-list-item modifier="longdivider list_item_nopadding list_type_list1" tappable onclick="loadMerchant('+ val.merchant_id+')" >';
@@ -173,10 +192,10 @@ restaurantList = function(data, element){
 	      html+='</div>';
 	      html+='<div class="center">';
 	      
-	         html+='<span class="list-item__title">'+ val.restaurant_name +'</span>';
+	         html+='<span class="list-item__title is_rtl_text_right">'+ val.restaurant_name +'</span>';
 	         	         
 	         
-             html+='<span class="list-item__subtitle">';
+             html+='<span class="list-item__subtitle is_rtl_text_right">';
               
                 if(!empty(val.address)){
                 	 html+=val.address;      
@@ -203,10 +222,23 @@ restaurantList = function(data, element){
                 if(!empty(val.delivery_fee)){               	                
 	                html+= val.delivery_fee+ '<br/>';
                 }
+                
+                if(val.is_sponsored==2){
+                   html+= '<ons-icon icon="ion-ios-circle-filled" size="12px" ></ons-icon>&nbsp;' +  t("Sponsored") +  '<br/>';
+                }
+                
                 if(!empty(val.offers)){               	                                	
 	                if(val.offers.length>=1){
 	                	$.each(val.offers, function(offer_key, offer_val){	                		
 	                		html+= '<ons-icon icon="ion-ios-circle-filled" size="12px" ></ons-icon>&nbsp;' +  offer_val.full +  '<br/>';
+	                	});
+	                }
+                }
+                
+                if(!empty(val.vouchers)){               	                                	
+	                if(val.vouchers.length>=1){
+	                	$.each(val.vouchers, function(vouchers_key, vouchers_val){	                		
+	                		html+= '<ons-icon icon="ion-ios-circle-filled" size="12px" ></ons-icon>&nbsp;' +  vouchers_val +  '<br/>';
 	                	});
 	                }
                 }
@@ -301,7 +333,7 @@ restaurantListWithBanner = function(data, element){
 		 html+='</div> ';
 		 
 		 html+='<ons-row>';
-		   html+='<ons-col width="70%" vertical-align="center" >';
+		   html+='<ons-col width="70%" vertical-align="center" class="is_rtl_text_right" >';
 			 html+='<h4>'+ val.restaurant_name +'</h4>';
 			 
 			 html+='<p class="concat_text">' ;
@@ -328,7 +360,7 @@ restaurantListWithBanner = function(data, element){
 		   
 		 html+='</ons-row>';
 		 
-		html+='<p class="concat_text">' ;
+		html+='<p class="concat_text is_rtl_text_right">' ;
 			 
 		   if(!empty(val.minimum_order)){               	                
                 html+= val.minimum_order+ '<br/>';
@@ -346,6 +378,14 @@ restaurantListWithBanner = function(data, element){
                 if(val.offers.length>=1){
                 	$.each(val.offers, function(offer_key, offer_val){	                		
                 		html+= '<ons-icon icon="ion-ios-circle-filled" size="12px" class="orange_color" ></ons-icon>&nbsp;' +  offer_val.full +  '<br/>';
+                	});
+                }
+            }
+            
+            if(!empty(val.vouchers)){               	                                	
+                if(val.vouchers.length>=1){
+                	$.each(val.vouchers, function(vouchers_key, vouchers_val){	                		
+                		html+= '<ons-icon icon="ion-ios-circle-filled" size="12px" class="orange_color" ></ons-icon>&nbsp;' +  vouchers_val +  '<br/>';
                 	});
                 }
             }
@@ -719,6 +759,17 @@ restaurantCategory = function(data, element){
 	if (data.length<=0){
 		return;
 	}	
+	
+	enabled_dish=''; disabled_image = '';
+	if(app_settings = getAppSettings()){
+		enabled_dish = app_settings.enabled_dish;
+		disabled_image = app_settings.disabled_image_menu1;
+	}
+	
+	/*alert("enabled_dish=>"+enabled_dish);
+	alert("disabled_image=>"+disabled_image);*/
+	
+	
 	var list = document.getElementById( element );
 	var html='';
 	
@@ -737,36 +788,81 @@ restaurantCategory = function(data, element){
 		         html+='<div class="center">';
 			     html+='<span class="list-item__title">'+ item_val.item_name +'</span>';
 			     
+			     if(enabled_dish==1){
+				    if(item_val.dish_image.length>0){
+				      html+='<ons-row>';		    
+				         $.each( item_val.dish_image, function( d_key, d_val ) {      	             
+				            html+='<ons-col vertical-align="top" width="35px">';
+				                html +='<div class="is-loading">'; 
+					            html +='<div class="spinner small"></div>';		
+				                   html+='<img class="cuisine_image" src="'+d_val+'">';
+				                html+='</div>';
+				            html+='</ons-col>';
+				       	  });
+				      html+='</ons-row>';
+				    }
+			     }
+			     
 			     if(!empty(item_val.item_description)){
 			         html+='<span class="list-item__subtitle">'+ item_val.item_description +' ';			         
-			         if (item_val.prices.length>0){
-			         	$.each( item_val.prices  , function( pricekey, priceval ) {
-			         		html+='<br/><ons-icon icon="ion-android-arrow-dropright" size="14px" style="color:#000;"></ons-icon> <price>'+priceval+'<price>';
-			         	});			            
+			         
+			         if(code_version=="1.4"){
+			         	if (item_val.prices2.length>0){
+			         		html+='<br/>';
+			     			$.each( item_val.prices2  , function( pricekey, priceval ) {
+			     				if(priceval.discount>0.001){
+			     					html+='<ons-icon icon="ion-android-arrow-dropright" size="14px" style="color:#000;"></ons-icon> <price>'+ '<span class="tag_discount">'+ priceval.original_price+'</span>' + priceval.discounted_price_pretty+'<price><br/>';
+			     				} else {
+			     					html+='<ons-icon icon="ion-android-arrow-dropright" size="14px" style="color:#000;"></ons-icon> <price>'+priceval.original_price+'<price><br/>';
+			     				}
+			     			});
+			     		}
+			         } else {
+				         if (item_val.prices.length>0){
+				         	$.each( item_val.prices  , function( pricekey, priceval ) {
+				         		html+='<br/><ons-icon icon="ion-android-arrow-dropright" size="14px" style="color:#000;"></ons-icon> <price>'+priceval+'<price>';
+				         	});			            
+				         }
 			         }
+			         
+			         
 			         html+='</span>';
 			     } else {
 			     	html+='<span class="list-item__subtitle">';
-			     	if (item_val.prices.length>0){
-			     		$.each( item_val.prices  , function( pricekey, priceval ) {
-			     			html+='<ons-icon icon="ion-android-arrow-dropright" size="14px" style="color:#000;"></ons-icon> <price>'+priceval+'<price><br/>';
-			     		});
-			     	}			     	
+			     	if(code_version=="1.4"){			     		 
+			     		if (item_val.prices2.length>0){
+			     			$.each( item_val.prices2  , function( pricekey, priceval ) {
+			     				if(priceval.discount>0.001){
+			     					html+='<ons-icon icon="ion-android-arrow-dropright" size="14px" style="color:#000;"></ons-icon> <price>'+ '<span class="tag_discount">'+ priceval.original_price+'</span>' + priceval.discounted_price_pretty+'<price><br/>';
+			     				} else {
+			     					html+='<ons-icon icon="ion-android-arrow-dropright" size="14px" style="color:#000;"></ons-icon> <price>'+priceval.original_price+'<price><br/>';
+			     				}
+			     			});
+			     		}
+			     	} else {
+				     	if (item_val.prices.length>0){
+				     		$.each( item_val.prices  , function( pricekey, priceval ) {
+				     			html+='<ons-icon icon="ion-android-arrow-dropright" size="14px" style="color:#000;"></ons-icon> <price>'+priceval+'<price><br/>';
+				     		});
+				     	}		
+			     	}	     	
 			        html+='</span>';
 			     }			     			     			     
 			    html+='</div>';
 			    
-			    if(!empty(item_val.photo)){
-			    html+='<div class="right">';
-		          html+='<div class="list-item_square_thumbnail" style="background-image: url('+ "'" + item_val.photo + "'" +')"   >';
-		          							         
-					html +='<div class="is-loading small-loader">'; 
-					html +='<div class="spinner"></div>';		
-					html +='<img class="hide" src="'+ item_val.photo +'">';	      
-					html +='</div>';   
-		          
-		          html+='</div>';
-		        html+='</div>';        
+			    if(disabled_image!=1){
+				    if(!empty(item_val.photo)){
+				    html+='<div class="left">';
+			          html+='<div class="list-item_square_thumbnail" style="background-image: url('+ "'" + item_val.photo + "'" +')"   >';
+			          							         
+						html +='<div class="is-loading small-loader">'; 
+						html +='<div class="spinner"></div>';		
+						html +='<img class="hide" src="'+ item_val.photo +'">';	      
+						html +='</div>';   
+			          
+			          html+='</div>';
+			        html+='</div>';        
+				    }
 			    }
 		        
 		        html+='</ons-list-item> ';
@@ -871,9 +967,23 @@ setItemList = function(data, element){
 		    }
 		    if (val.prices.length>0){
 		    	html+='<span class="list-item__subtitle">';
-		    	$.each( val.prices  , function( pricekey, priceval ) {		    		
-		    		  html+= ''+priceval + '<br/>';
-		    	});
+		    	
+		    	if(code_version=="1.4"){
+		    		if (val.prices2.length>0){
+		    			$.each( val.prices2  , function( pricekey, priceval ) {
+		    				if(priceval.discount>0.001){
+							  	html+= '<span class="tag_discount">'+ priceval.original_price+'</span>' + priceval.discounted_price_pretty + '<br/>';
+							  } else {
+							  	html+= ''+priceval.original_price + '<br/>';
+							  }			    		  
+		    			});
+		    		}
+		    	} else {
+			    	$.each( val.prices  , function( pricekey, priceval ) {		    
+			    		html+= ''+priceval + '<br/>';		    		
+			    	});
+		    	}
+		    	
 		    	html+='</span>';
 		    }
 		  html+='</div>';
@@ -890,6 +1000,11 @@ setItemList = function(data, element){
 
 setCategoryCarousel = function(data, selected_cat_id){
 	
+	cart_theme = getCartTheme();
+	if(cart_theme==2){
+		return;
+	}
+		
 	selected_key = 0;
 	if (data.length<=0){
 		return;
@@ -1151,6 +1266,11 @@ var displayItemDetails = function(data, cart_data) {
 	    html+='</ons-list>';	  	
 	}
 	
+	enabled_addon_desc = false;
+	if(app_settings = getAppSettings()){
+		enabled_addon_desc = app_settings.enabled_addon_desc;
+	}	
+	
 	/*ADDDON*/
 	if($.isArray(data.addon_item)) {
 		$.each( data.addon_item, function( addon_key, addon_val ) {
@@ -1171,19 +1291,20 @@ var displayItemDetails = function(data, cart_data) {
 	        
 	          if($.isArray(addon_val.sub_item)) {
 	          	  $.each( addon_val.sub_item, function( subitem_key, subitem_val ) {
-	          	  		          	  	  	          	  	
+	          	  		          	  	  	       
+	          	  	  dump("multi_option=>"+ addon_val.multi_option)
 	          	  	  switch(addon_val.multi_option)
 	          	  	  {
 	          	  	  	case "one":	          	  	  	 
-	          	  	  	  html+= priceRadio(addon_val.subcat_id ,  subitem_val , cart_data , addon_val.two_flavor_position );
+	          	  	  	  html+= priceRadio(addon_val.subcat_id ,  subitem_val , cart_data , addon_val.two_flavor_position , enabled_addon_desc );
 	          	  	  	break;
 	          	  	  	
 	          	  	  	case "multiple":
-	          	  	  	  html+= priceCheckbox(addon_val.subcat_id ,  subitem_val , cart_data );
+	          	  	  	  html+= priceCheckbox(addon_val.subcat_id ,  subitem_val , cart_data , enabled_addon_desc);
 	          	  	  	break;
 	          	  	  	
 	          	  	  	case "custom":
-	          	  	  	  html+= priceCheckboxCustom(addon_val.subcat_id , addon_val.multi_option_val,  subitem_val , cart_data);
+	          	  	  	  html+= priceCheckboxCustom(addon_val.subcat_id , addon_val.multi_option_val,  subitem_val , cart_data, enabled_addon_desc);
 	          	  	  	break;
 	          	  	  	
 	          	  	  }
@@ -1199,7 +1320,7 @@ var displayItemDetails = function(data, cart_data) {
 };
 
 
-var priceRadio = function(cat_id,  data , cart_data, two_flavor_position) {
+var priceRadio = function(cat_id,  data , cart_data, two_flavor_position, enabled_addon_desc) {
 	
 	hide_price = isHidePrice();
 	
@@ -1232,10 +1353,16 @@ var priceRadio = function(cat_id,  data , cart_data, two_flavor_position) {
 	
 	html+='</ons-list-item>';
 	
+	if(enabled_addon_desc==1){
+		html+='<ons-list-item>';
+		 html+='<span class="list-item__subtitle">'+ data.item_description +'</span>';
+		html+='</ons-list-item>';
+	}	
+	
 	return html;
 };
 
-var priceCheckboxCustom = function(cat_id, limited_value, data , cart_data ) {
+var priceCheckboxCustom = function(cat_id, limited_value, data , cart_data, enabled_addon_desc ) {
 		
 	hide_price = isHidePrice();
 	
@@ -1268,11 +1395,17 @@ var priceCheckboxCustom = function(cat_id, limited_value, data , cart_data ) {
 	
 	html+='</ons-list-item>';
 	
+	if(enabled_addon_desc==1){
+		html+='<ons-list-item>';
+		 html+='<span class="list-item__subtitle">'+ data.item_description +'</span>';
+		html+='</ons-list-item>';
+	}		
+	
 	return html;
 };
 
 
-var priceCheckbox = function(cat_id, data , cart_data ) {
+var priceCheckbox = function(cat_id, data , cart_data , enabled_addon_desc ) {
 
 	hide_price = isHidePrice();
 
@@ -1328,6 +1461,11 @@ var priceCheckbox = function(cat_id, data , cart_data ) {
 	
 	html+='</ons-list-item>';
 	
+	if(enabled_addon_desc==1){
+		html+='<ons-list-item>';
+		 html+='<span class="list-item__subtitle">'+ data.item_description +'</span>';
+		html+='</ons-list-item>';
+	}
 	return html;
 };
 
@@ -1890,8 +2028,20 @@ accountMenu = function(login){
 			  html+='</div>';
 			html+='</ons-list-item>';
 		}
+		
+	    if(app_settings.contact_us.enabled_contact){
+		html+='<ons-list-item tappable modifier="chevron" onclick="showPage(\'contact_us.html\');" >';
+		  html+='<div class="left">';
+		    html+='<ons-icon icon="md-email" size="25px" class="list-item__icon"></ons-icon>';
+		  html+='</div>';
+		  html+='<div class="center">';
+		    html+= t('Contact Us');
+		  html+='</div>';
+		html+='</ons-list-item>';
+		}
+		
 	}
-
+		
 	
 	if (login){
 		
@@ -1901,7 +2051,7 @@ accountMenu = function(login){
 	        html+='<div class="center">' + t('Notifications') +  '</div>';
 	      html+='</ons-list-item>';
 		
-		 html+='<ons-list modifier="list_menu">';
+		 //html+='<ons-list modifier="list_menu">';
 	      html+='<ons-list-item modifier="chevron" tappable onclick="showPage(\'order_list.html\')" >';
 	        html+='<div class="left"><ons-icon icon="fa-cocktail" size="22px"></ons-icon></div>';
 	        html+='<div class="center">' + t('Order History') +  '</div>';
@@ -1915,21 +2065,21 @@ accountMenu = function(login){
 	      }
 	      
 	      if(app_settings.addon.points){
-		       html+='<ons-list modifier="list_menu">';
+		       //html+='<ons-list modifier="list_menu">';
 		      html+='<ons-list-item modifier="chevron" tappable onclick="showPage(\'points_list.html\')" >';
 		        html+='<div class="left"><ons-icon icon="md-view-week" size="22px"></ons-icon></div>';
 		        html+='<div class="center">' + t('Points') +  '</div>';
 		      html+='</ons-list-item>';
 	      }
 	      
-	      html+='<ons-list modifier="list_menu">';
+	      //html+='<ons-list modifier="list_menu">';
 	      html+='<ons-list-item modifier="chevron" tappable onclick="showPage(\'favorite_list.html\')" >';
 	        html+='<div class="left"><ons-icon icon="md-favorite-outline" size="22px"></ons-icon></div>';
 	        html+='<div class="center">' + t('Favorites') +  '</div>';
 	      html+='</ons-list-item>';
 	      
 	      if(app_settings.disabled_cc_management!="yes"){
-		  html+='<ons-list modifier="list_menu">';
+		  //html+='<ons-list modifier="list_menu">';
 	      html+='<ons-list-item modifier="chevron" tappable onclick="showPage(\'creditcard_list.html\')" >';
 	        html+='<div class="left"><ons-icon icon="md-card" size="22px"></ons-icon></div>';
 	        html+='<div class="center">' + t('Your Credit Cards') +  '</div>';
@@ -1941,12 +2091,18 @@ accountMenu = function(login){
 	        html+='<div class="center">' + t('Your Address Book') +'</div>';
 	      html+='</ons-list-item>';
 	      
+	      html+=getCustomPages(1);
+	      
 	      html+='<ons-list-item modifier="chevron" tappable  onclick="logout();" >';
 	        html+='<div class="left"><ons-icon icon="ion-log-out" size="22px"></ons-icon></div>';
 	        html+='<div class="center">' + t('Log out') +'</div>';
 	      html+='</ons-list-item>';
+	      	      
 		
 	} else {		
+		
+		html+=getCustomPages(1);
+		
 		html+='<ons-list-item tappable onclick="Pagelogin(1)">';
 		  html+='<div class="left">';
 		    html+='<ons-icon icon="md-account-o" class="list-item__icon" size="25px"></ons-icon>';
@@ -2055,30 +2211,8 @@ settingsMenu = function(login){
 	  html+='</div>';	  	  
 	html+='</ons-list-item>';
 	
-	/*ADD CUSTOM PAGE*/
-	if(app_settings = getAppSettings()){		
-		if(app_settings.custom_pages.length>0){
-			$.each( app_settings.custom_pages  , function( page_key, page_val ) {
-				
-				html+='<ons-list-item tappable modifier="chevron" onclick="loadCustomPage('+ page_val.page_id +')" >';
-				  html+='<div class="left">';
-				   
-				    if(!empty(page_val.icon)){
-				       icon = page_val.icon;
-				    } else {
-				       icon = "ion-ios-circle-outline";
-				    }
-				  
-				    html+='<ons-icon icon="'+ icon +'" size="25px" class="list-item__icon"></ons-icon>';
-				  html+='</div>';
-				  html+='<div class="center">';
-				    html+= t(page_val.title);
-				  html+='</div>';	  	  
-				html+='</ons-list-item>';
-				
-			});
-		}
-	}
+
+	html+=getCustomPages(2);
 	
 	if(login){
 	   html+='<ons-list-title modifier="list_title_grey">'+ t("RECEIVE PUSH NOTIFICATION") +'</ons-list-title>';
@@ -2541,6 +2675,12 @@ merchantAbout = function(data, element){
 	   html+='<p class="sub">'+ data.services +'</p> ';
 	   }
 	   
+	   if(!empty(data.restaurant_phone)){
+	   	  if(app_settings.remove_contact!=1){
+	         html+='<p class="sub">'+ t("Tel#") +' :<a href="tel:'+data.restaurant_phone+' ">'+data.restaurant_phone+'</a></p> ';
+	   	  }
+	   }
+	   
 	   if(!empty(data.website)){	   	   
 	   	   html+='<ons-button modifier="quiet link_button" onclick="browseLink( '+ "'" + data.website + "'" +' )" >';
 	   	   html+=data.website ;
@@ -2935,7 +3075,10 @@ setGetRecentLocation = function(data, element_id){
 		
 	$.each( data  , function( key, val ) {
 		
-		html+='<ons-list-item class="recent_loc_child" tappable onclick="setRecentSearch('+ "'" + val.search_address + "',"+ "'"+ val.latitude + "'," +  "'"  + val.longitude + "'" +')" >';
+		//setRecentSearch = function(address, lat, lng, street, city,  state, zipcode, location_name){
+		//html+='<ons-list-item class="recent_loc_child" tappable onclick="setRecentSearch('+ "'" + val.search_address + "',"+ "'"+ val.latitude + "'," +  "'"  + val.longitude + "'" +')" >';
+		params_data = clickFormat( val.search_address+ "|" + val.latitude + "|"+ val.longitude + "|" + val.street  + "|" + val.city  + "|" + val.state  + "|" + val.zipcode  + "|" + val.location_name );
+		html+='<ons-list-item class="recent_loc_child" tappable onclick="setRecentSearch('+ params_data +')" >';
 		  html+='<div class="left">';
 		    html+='<ons-icon icon="ion-ios-loop" class="list-item__icon"></ons-icon>';
 		  html+='</div>';
@@ -3100,10 +3243,14 @@ restaurantListColumn = function(data, element){
 			  col+='<div class="header_bg" style="background-image: url('+ "'" + val.background_url + "'" +')"></div>';			  
 			  if(!empty(val.open_status_raw)){
 	             col+='<div class="green_tag '+val.open_status_raw+'">'+val.open_status+'</div>'
-	          }
+	          }	          
+              if(!empty(val.sponsored)){
+			   	  col+='<div class="sponsored_tag">'+ val.sponsored +'</div>';
+			  }
+			   
 			col+='</div> ';
-			col+='<h4>'+val.restaurant_name+'</h4>';
-			col+='<p class="concat_text">'+val.cuisine+'</p>';
+			col+='<h4 class="is_rtl_text_right">'+val.restaurant_name+'</h4>';
+			col+='<p class="concat_text is_rtl_text_right">'+val.cuisine+'</p>';
 			col+='<ons-row class="rating_wrap raty-small">';
 			  col+='<ons-col vertical-align="top"><div class="raty-stars" data-score="'+ val.rating.ratings +'"></div></ons-col>';
 			  col+='<ons-col vertical-align="top">'+ val.rating.review_count +'</ons-col>';
@@ -3252,13 +3399,30 @@ setItemListColumn = function(data, element){
 			}
 			
 			col+='<p class="concat_text" style="width:155px;" >'+ val.item_description +'</p>';
-			if (val.prices.length>0){
-				col+='<p>';
-				$.each( val.prices  , function( pricekey, priceval ) {		    		
-		    		  col+= ''+priceval + '<br/>';
-		    	});
-		    	col+='</p>';
+			
+			
+			if(code_version=="1.4"){
+				if (val.prices2.length>0){
+					col+='<p>';
+					$.each( val.prices2  , function( pricekey, priceval ) {		    		
+						  if(priceval.discount>0.001){
+						  	col+= '<span class="tag_discount">'+ priceval.original_price+'</span>' + priceval.discounted_price_pretty + '<br/>';
+						  } else {
+						  	col+= ''+priceval.original_price + '<br/>';
+						  }			    		  
+			    	});
+			    	col+='</p>';
+				}
+			} else {
+				if (val.prices.length>0){
+					col+='<p>';
+					$.each( val.prices  , function( pricekey, priceval ) {		    		
+			    		  col+= ''+priceval + '<br/>';
+			    	});
+			    	col+='</p>';
+				}
 			}
+			
          col+='</ons-col>';		
 		
 		if (x>=2){
@@ -3295,7 +3459,32 @@ setTrackList = function(data, element){
 	if (data.length<=0){
 		return;
 	}		
+	
 	html='';
+	
+	track_template = "1";
+	if(app_settings = getAppSettings()){
+		track_template = app_settings.tracking_theme;
+	}
+	
+	if(track_template=="2"){
+		
+		html+='<ons-row style="padding:10px 10px 0;">';
+	      html+='<ons-col width="80px"  vertical-align="center"><img class="thumbnail circle" src="'+ data.driver_photo +'"></ons-col>';
+	      html+='<ons-col vertical-align="center" width="160px" >';
+	         html+='<h5 class="concat_text">'+  data.driver_name +'</h5>';
+	         html+='<p class="small concat_text">'+ t("Your Delivery Guy") +'</p>';
+	      html+='</ons-col>';
+	      html+='<ons-col width="80px"  vertical-align="center" >';
+	              html+='<ons-button modifier="to_orange no_shadow" onclick="window.open('+ "'" + 'tel:'+  data.driver_phone + "'" +');"   >';
+	                html+='<ons-icon icon="md-phone" size="25px"></ons-icon>';
+	              html+='</ons-button>';	  
+	             html+='</ons-col>';
+	    html+='</ons-row>';		
+	    $("#track_template2").html( html );	    
+		return;
+	} 
+		
 	var list = document.getElementById(element);
 	
 	if(data.driver_id>0){
@@ -3332,15 +3521,15 @@ setTrackList = function(data, element){
         html='';
 	}	
 	
-	if(!empty(data.merchant_address)){		
+	if(!empty(data.delivery_address)){		
 		
 		html+='<ons-list-item modifier="longdivider full_list" tappable onclick="map_setCenter('+ "'" + data.task_lat + "','" + data.task_lng + "'" +')" >';
 	      html+='<div class="left">';
-	        html+='<ons-icon icon="md-gps-dot" class="list-item__icon"></ons-icon>';
+	        html+='<ons-icon icon="md-flag" class="list-item__icon"></ons-icon>';
 	      html+='</div>';
 	      html+='<div class="center">';	        
-	        html+='<span class="list-item__title">'+data.merchant_name+'</span>';
-	        html+='<p class="list-item__subtitle small">'+data.merchant_address+'</p>';		        
+	        html+='<span class="list-item__title">'+data.customer_name+'</span>';
+	        html+='<p class="list-item__subtitle small">'+data.delivery_address+'</p>';		        
 	      html+='</div>';
 	  html+='</ons-list-item>';
 		
@@ -3626,10 +3815,11 @@ fillStartupBanner = function(div){
 			
 	if(app_settings = getAppSettings()){
 	   banner = app_settings.startup.banner;	   
-	   
+	   	   	   	 
 	   if(banner.length<=0){	   	  
 	   	  return;
 	   }
+	   	   
 	   
 	   html+='<ons-carousel fullscreen swipeable auto-scroll overscrollable id="startup_carousel"  >';	   
 	   $.each( banner  , function( key, val ) {
@@ -3673,11 +3863,11 @@ setlanguageList2 = function(data, element, selected_lang){
 	$.each( data  , function( key, val ) {
 
 		is_selected = '';
-		if(val==selected_lang){
+		if(key==selected_lang){
 			is_selected='orange_color';
 		}
 		
-	  html+='<ons-list-item modifier="longdivider full_list" tappable onclick="setStartupLanguage('+ "'" + val + "'"  +')"	   >';
+	  html+='<ons-list-item modifier="longdivider full_list" tappable onclick="setStartupLanguage('+ "'" + key + "'"  +')"	   >';
 	      html+='<div class="left">';
 	        html+='<ons-icon icon="md-check" class="list-item__icon  '+is_selected+' "></ons-icon>';
 	      html+='</div>';
@@ -3727,4 +3917,585 @@ filtersItem = function(data){
 	   $("#list_filters_item").html( html );
 	}
 	
+};
+
+fillEnterPhone = function(){
+	html='';
+	
+	turnoff_prefix = true;
+	
+	if(settings = getAppSettings()){
+		if(settings.mobile_turnoff_prefix==1){
+			turnoff_prefix = false;
+		}
+	}
+	
+	html+='<ons-list-item>';
+	    if(turnoff_prefix){
+           html+='<div class="left" style="width:60px;"> <ons-input type="text" name="moobile_prefix" id="moobile_prefix" class="moobile_prefix" required  placeholder="'+ t("Prefix") +'" float value="" onclick="showMobileCode()" ></ons-input> </div>';
+	    }
+        html+='<div class="center"> <ons-input type="number" value="" maxlength="15" name="mobile_no" id="mobile_no" required class="mobile_no"  placeholder="'+ t("Mobile no.") +'" float ></ons-input> </div>';
+    html+='</ons-list-item>';
+    $("#enter_phone_list").html( html )	;
+};
+
+createAccountFields = function(){
+	
+	html='';
+	
+	settings = getAppSettings();
+	
+	
+	html+='<ons-list-item>';        
+       html+='<div class="center"><ons-input name="first_name" id="first_name" required modifier="transparent" placeholder="'+ t("First Name") +'" float ></ons-input></div>';
+    html+='</ons-list-item>';
+    
+    html+='<ons-list-item>';       
+       html+='<div class="center"><ons-input name="last_name" id="last_name" required modifier="transparent" placeholder="'+ t("Last Name") +'" float></ons-input></div>';
+    html+='</ons-list-item>';
+        
+    if(settings.registration.phone==1){
+	    html+='<ons-list-item> ';       
+	       html+='<div class="center"><ons-input name="contact_phone" id="contact_phone" class="contact_phone" required modifier="transparent" placeholder="'+ t("Mobile") +'" float onclick="showPage(\'enter_phone.html\')"></ons-input></div>';
+	    html+='</ons-list-item>';
+    }
+        
+    if(settings.registration.email==1){
+	    html+='<ons-list-item>   ';     
+	       html+='<div class="center"><ons-input type="email" name="email_address" id="email_address" required modifier="transparent" placeholder="'+ t("Email") +'" float ></ons-input></div>';
+	    html+='</ons-list-item>';
+    }
+    
+    html+='<ons-list-item>   ';     
+       html+='<div class="center"><ons-input type="password" name="password" id="password" required modifier="transparent" placeholder="'+ t("Password") +'" float ></ons-input></div>';
+    html+='</ons-list-item>';
+    
+    html+='<ons-list-item class="reg_last_row"> ';
+       html+='<div class="center"><ons-input type="password" name="cpassword" id="cpassword" required modifier="transparent" placeholder="'+ t("Confirm Password") +'" float ></ons-input></div>';
+    html+='</ons-list-item>';
+	
+    $("#create_account_list").html( html )	;
+};
+
+fillTrackTemplate = function(options){
+	html='';
+	switch(options){
+		case "1":
+		html+='<ons-bottom-toolbar modifier="bottom_track">';
+		html+='<ons-progress-bar value="0" secondary-value="100"></ons-progress-bar>';
+		html+='<ons-list id="list_track" modifier="list_style1 is_rtl">';
+        html+='</ons-list>';
+		html+='</ons-bottom-toolbar>';
+		break;
+		
+		case "2":
+		$(".map_wrapper").css("height", "85%");
+		html+='<ons-bottom-toolbar modifier="bottom_track2">';
+		html+='<ons-progress-bar value="0" secondary-value="100"></ons-progress-bar>';
+		    html+='<DIV id="track_template2">';		   
+		    html+='</DIV>';		  
+		html+='</ons-bottom-toolbar>';
+		break;
+	}	
+	$(".track_loader").after(html);	
+};
+
+fillPaymentForm = function(data, element){
+	dump(data);
+	
+	var list = document.getElementById( element );
+	var html='';
+	
+	var list_data = {};	
+	list_data[0] = { "label": t("Description"), "value": data.payment_description };
+	
+	if(data.card_fee>0){
+		list_data[1] = { "label": t("Amount"), "value": prettyPrice(data.sub_less_card_fee) };	
+	    list_data[2] = { "label": t("Card fee"), "value": prettyPrice(data.card_fee) };
+	    list_data[3] = { "label": t("Total"), "value": prettyPrice(data.total_amount) };
+	} else {
+		list_data[1] = { "label": t("Total"), "value": prettyPrice(data.total_amount) };
+	}				
+		
+	$.each( list_data  , function( key, val ) {			
+		html+='<ons-list-item modifier="longdivider full_list">';
+        html+='<ons-row style="padding:0;">';
+          html+='<ons-col width="100px">'+ val.label +' :</ons-col>';
+          html+='<ons-col>'+ val.value +'</ons-col>';
+        html+='</ons-row>';
+        html+='</ons-list-item>';           
+		
+		var newItem = ons.createElement(html);
+	    list.appendChild(newItem);
+	    html='';
+    
+	});
+	
+	html+='<ons-list-item>';
+     html+='<div class="center">';
+      html+='<ons-input name="contact_phone" id="contact_phone" class="contact_phone" modifier="transparent" value="'+ data.contact_phone +'" ';
+	         html+='placeholder="'+ t("Phone") +'" float  onclick="showPage(\'enter_phone.html\')" onfocus="showPage(\'enter_phone.html\')" required ></ons-input>';
+     html+='</div>';
+    html+='</ons-list-item>';
+    
+    var newItem = ons.createElement(html);
+    list.appendChild(newItem);
+    html='';
+    
+	html+='<ons-list-item>';
+     html+='<div class="center">';
+      html+='<ons-input name="payer_remarks" id="payer_remarks" class="payer_remarks" modifier="transparent" ';
+	         html+='placeholder="'+ t("Remarks") +'" float ></ons-input>		';
+     html+='</div>';
+    html+='</ons-list-item>';
+
+    var newItem = ons.createElement(html);
+    list.appendChild(newItem);
+    html='';
+    
+};
+
+ageRestriction = function(){
+		
+	age_restriction_enabled = getStorage("age_restriction_enabled");
+	if(age_restriction_enabled==1){
+		return;
+	}
+	
+	if(app_settings = getAppSettings()){
+		age_restriction = app_settings.age_restriction;
+		age_restriction_content = app_settings.age_restriction_content;
+		if(age_restriction==1 && !empty(age_restriction_content) ){
+			
+			ons.platform.select('ios'); 
+			ons.notification.confirm( t(age_restriction_content) ,{
+				title: dialog_title,
+				id : "dialog_cancel_order",
+				buttonLabels : [ t("I'M OVER 18"), t("EXIT") ]
+			}).then(function(input) {
+				if(input<=0){
+					setStorage("age_restriction_enabled",1);
+				} else {
+					if (navigator.app) {
+					   navigator.app.exitApp();
+					 } else if (navigator.device) {
+					   navigator.device.exitApp();
+					 } else {
+					   window.close();
+					 }
+				}
+			});
+		}
+	}
+};
+
+
+fillHomeBanner = function(data, div){
+	
+	app_settings = getAppSettings();	
+	
+	item_width ='item-width="60%"';
+	if(app_settings.home.mobile2_home_banner_full==1){
+		item_width='';
+	}
+	
+	html='<ons-carousel fullscreen swipeable auto-scroll overscrollable id="carousel" direction="horizontal" '+ item_width +'   >';
+	$.each( data  , function( key, val ) {
+		
+      html+='<ons-carousel-item >';
+      html+='<div class="banner">';
+        html+='<div class="header_bg" style="background-image: url('+ "'" + val + "'" +')"  >';
+        html+='<div class="">';
+        html+='<div class="spinner"></div>';
+           html+='<img class="hide" src="'+ val +'"></div>';
+        html+='</div>';
+        html+='</div>';
+      html+='</ons-carousel-item>';
+		
+	});
+	html+='</ons-carousel>';
+	
+	$(div).html( html );
+	
+	imageLoaded(); 
+};
+
+
+carouselMap = function(data, div){	
+	
+	if(data.length<=0){
+		return false;
+	}
+	
+	html='<ons-carousel fullscreen swipeable auto-scroll overscrollable  direction="horizontal" item-width="90%"  >';
+	$.each(data, function(key, val){
+		html+='<ons-carousel-item onclick="loadMerchant('+ val.merchant_id+')"  >';
+		html +='<ons-ripple color="#EF6625" background="#EF6625"></ons-ripple>';
+        
+		html+='<ons-row>';
+		  html+='<ons-col width="120px">';
+		  
+		  html+='<div class="banner">';
+		  html+='<div >';
+		    html+='<img class="hide" src="'+ val.background_url +'">';
+		     html+='<div class="header_bg" style="background-image: url('+ "'" + val.background_url + "'" +')"  >';
+		         html+='<div class="spinner"></div>';
+		     html+='</div>';
+		    html+='</div>';
+		  html+='</div>';
+		  
+		  html+='</ons-col>';
+		  
+		  html+='<ons-col width="5px"></ons-col>';
+		  
+		  html+='<ons-col width="120px">';
+		    html+='<h4>'+ val.restaurant_name +'</h4>';
+		    html+='<p class="concat_text">'+ val.cuisine +'</p>';
+		    
+		    html+='<ons-row class="rating_wrap small">';
+		      html+='<ons-col><div class="raty-stars" data-score="'+ val.rating.ratings +'"></div></ons-col>';
+		      html+='<ons-col>'+ val.rating.review_count +'</ons-col>';
+		    html+='</ons-row>';
+		    
+		  html+='</ons-col>';
+		html+='</ons-row>';
+    
+        html+='</ons-carousel-item>';
+	});	
+	
+	html+='</ons-carousel>';
+	
+	$(div).html( html );
+	
+	initRatyStatic();
+};
+
+LocationSearchForm = function(div){
+	
+	html='';
+	
+	location_mode = locationMode();
+	dump("location_mode=>"+location_mode);
+
+	switch(location_mode){
+		case 1:
+
+		 html+='<div class="content_wrapper">';
+		  html+='<ons-row>';
+		    html+='<ons-col vertical-align="center"  >';
+		      html+='<ons-search-input id="city_name" class="city_name" required placeholder="'+ t("City") +'" onclick="showPage(\'location_city.html\',\'none\',\'{address_book:0,state_id:0}\')"  ></ons-search-input>';
+		    html+='</ons-col>';
+		  html+='</ons-row>';
+		  html+='</div>';
+		  
+		  html+='<div class="content_wrapper">';
+		  html+='<ons-row>';
+		    html+='<ons-col vertical-align="center"  >';
+		      html+='<ons-search-input id="area_name" class="area_name" required placeholder="'+ t("District / Area") +'"  onclick="showLocationArea2();" ></ons-search-input>';
+		    html+='</ons-col>';
+		  html+='</ons-row>';
+		  html+='</div>';
+		
+		break;
+		
+		case 2: 
+		
+		
+		html+='<div class="content_wrapper">';
+		  html+='<ons-row>';
+		    html+='<ons-col vertical-align="center"  >';
+		      html+='<ons-search-input id="state_name" class="state_name" required placeholder="'+ t("State") +'" onclick="showPage(\'location_state.html\',\'none\',\'{address_book:0,state_id:0}\')"  ></ons-search-input>';
+		    html+='</ons-col>';
+		  html+='</ons-row>';
+		  html+='</div>';
+		
+		 html+='<div class="content_wrapper">';
+		  html+='<ons-row>';
+		    html+='<ons-col vertical-align="center"  >';
+		      html+='<ons-search-input id="city_name" class="city_name" required placeholder="'+ t("City") +'" onclick="showPage(\'location_city.html\',\'none\',\'{address_book:0,state_id:0}\')"  ></ons-search-input>';
+		    html+='</ons-col>';
+		  html+='</ons-row>';
+		  html+='</div>';
+		  
+		break;
+		
+		case 3:
+		
+		html+='<div class="content_wrapper">';
+		  html+='<ons-row>';
+		    html+='<ons-col vertical-align="center"  >';
+		      html+='<ons-search-input id="postal_code" class="postal_code" required placeholder="'+ t("Postal Code/Zip Code") +'" onclick="showPage(\'location_postal_code.html\',\'none\',\'{address_book:0,state_id:0}\')"  ></ons-search-input>';
+		    html+='</ons-col>';
+		  html+='</ons-row>';
+		  html+='</div>';
+		
+		break;
+		
+		default:
+		  showToast( t("Location mode is not defined") );	
+		break;
+	}
+	
+	$(div).html( html );			
+	
+};
+
+setCityList = function(data, element){	
+	html='';
+	
+	var list = document.getElementById(element);
+	
+	$.each( data  , function( key, val ) {
+		dump(val);
+		//setCity = function(name, city_id, state_id, state_name, country_id, country_name){
+		html+='<ons-list-item tappable onclick="setCity('+ clickFormat(val.name+"|"+val.city_id+"|"+val.state_id+"|"+ val.state_name + "|"+val.country_id +"|" + val.country_name ) +')">';
+	       html+='<div class="center">';
+	         html+='<span class="list-item__title">'+ val.city_name +'</span>';
+	         html+='<span class="list-item__subtitle">'+ val.state_name +'</span>';
+	       html+='</div>';
+	     html+='</ons-list-item>';
+	     
+	     var newItem = ons.createElement(html);
+	    list.appendChild(newItem);
+	    html='';
+	    	     
+	});
+};
+
+setAreaList = function(data, element){	
+	
+	html='';	
+	var list = document.getElementById(element);
+	
+	$.each( data  , function( key, val ) {
+		dump(val);
+		html+='<ons-list-item tappable onclick="setArea('+ clickFormat(val.area_id+"|"+val.name) +')">';
+	       html+='<div class="center">';
+	         html+='<span class="list-item__title">'+ val.area_name +'</span>';
+	         html+='<span class="list-item__subtitle">'+ val.city_name +'</span>';
+	       html+='</div>';
+	     html+='</ons-list-item>';
+	     
+	     var newItem = ons.createElement(html);
+	    list.appendChild(newItem);
+	    html='';
+	    	     
+	});
+};
+
+setStateList = function(data, element){
+	
+	html='';
+	
+	var list = document.getElementById(element);
+	
+	$.each( data  , function( key, val ) {
+		dump(val);
+		html+='<ons-list-item tappable onclick="setState('+ clickFormat(val.state_raw+"|"+val.state_id+"|"+val.country_id+"|"+val.country_name) +')" >';
+	       html+='<div class="center">';
+	         html+='<span class="list-item__title">'+ val.state +'</span>';
+	         html+='<span class="list-item__subtitle">'+ val.country_name +'</span>';
+	       html+='</div>';
+	     html+='</ons-list-item>';
+	     
+	     var newItem = ons.createElement(html);
+	    list.appendChild(newItem);
+	    html='';
+	    	     
+	});
+	
+};
+
+setPotalList  = function(data, element){
+	
+	html='';
+		
+	var list = document.getElementById(element);
+	
+	$.each( data  , function( key, val ) {
+		dump(val);
+		html+='<ons-list-item tappable onclick="setPostal('+ clickFormat(val.city_id+"|"+val.city_name+"|"+val.postal_code_raw+"|"+val.state_id + "|" + val.state_name +"|" + val.country_id ) +')" >';
+	       html+='<div class="center">';
+	         html+='<span class="list-item__title">'+ val.postal_code +'</span>';
+	         html+='<span class="list-item__subtitle">'+ val.city_name +'</span>';
+	       html+='</div>';
+	     html+='</ons-list-item>';
+	     
+	     var newItem = ons.createElement(html);
+	    list.appendChild(newItem);
+	    html='';
+	    	     
+	});
+	
+};
+
+setFloatingCategory = function(element){
+	
+	html='';		
+	var list = document.getElementById(element);
+	
+	data = getStorage("active_merchant_category");	
+	if(empty(data)){
+		return;
+	}
+	
+	current_page_id = onsenNavigator.topPage.id;	
+	
+	data = JSON.parse( data );	 
+	if(!empty(data)){
+		$.each( data  , function( key, val ) {
+			
+			if(current_page_id=="restaurant_page"){
+			   html+='<ons-list-item modifier="nodivider full_list" tappable onclick="showItemPageFloating('+ clickFormat(val.cat_id+"|"+"1") +')" >';
+			} else {
+			   html+='<ons-list-item modifier="nodivider full_list" tappable onclick="showItemPageFloating('+ clickFormat(val.cat_id+"|"+"2") +')"  >';
+			}
+		      html+='<div class="center">';
+		      html+='<span class="list-item__title">'+ val.category_name +'</span>';
+		      html+='<span class="list-item__subtitle">'+ val.item_count +'</span>';
+		    html+='</div>';
+		    html+='</ons-list-item>';
+		    
+		    var newItem = ons.createElement(html);
+		    list.appendChild(newItem);
+		    html='';
+			
+		});
+	}
+};
+
+
+getCustomPages = function(is_location){
+	/*ADD CUSTOM PAGE*/
+	html='';
+	if(app_settings = getAppSettings()){		
+		custom_pages_location = app_settings.custom_pages_location;		
+		//alert(is_location+"=>"+custom_pages_location);
+		if(custom_pages_location==is_location){
+			if(app_settings.custom_pages.length>0){
+				$.each( app_settings.custom_pages  , function( page_key, page_val ) {
+					
+					html+='<ons-list-item tappable modifier="chevron" onclick="loadCustomPage('+ page_val.page_id +')" >';
+					  html+='<div class="left">';
+					   
+					    if(!empty(page_val.icon)){
+					       icon = page_val.icon;
+					    } else {
+					       icon = "ion-ios-circle-outline";
+					    }
+					  
+					    html+='<ons-icon icon="'+ icon +'" size="25px" class="list-item__icon"></ons-icon>';
+					  html+='</div>';
+					  html+='<div class="center">';
+					    html+= t(page_val.title);
+					  html+='</div>';	  	  
+					html+='</ons-list-item>';
+					
+				});
+				return html;
+			}
+		}
+	}	
+	return '';
+};
+
+/*1.4*/
+addTermsCondition = function(element){
+	
+	 var list = document.getElementById(element);
+	 html='';
+	        
+	 html+='<ons-list-item modifier="list_small nodivider">';
+	 html+='<p>'+ t("By creating an account, you agree to receive sms from vendor.") +'</p>';
+	 html+='</ons-list-item>';
+	 
+	 var newItem = ons.createElement(html);
+    list.appendChild(newItem);	    
+    html='';  
+	
+	if(app_settings = getAppSettings()){
+		if(app_settings.signup_settings.enabled_terms_condition==1){
+			terms_url = app_settings.signup_settings.terms_url;			
+	        
+	        html+='<ons-list-item modifier="list_small">';
+			html+='<label class="left">';
+			html+='<ons-checkbox name="check_terms_condition" input-id="check_terms_condition" class="check_terms_condition" value="1" ></ons-checkbox>';
+			html+='</label>';
+			html+='<label for="check_terms_condition" class="center ">';
+			html+='<span class="trn">'+ t("I Agree To The") +'</span>&nbsp;<a href="javascript:;" class="small" onclick="browseLink('+ "'" + terms_url + "'" +')">';
+			html+='<span class="trn">'+ t("Terms and condition") +'</span>';
+			html+='</a>';
+			html+='</label>';
+			html+='</ons-list-item>';
+	     
+			var newItem = ons.createElement(html);
+            list.appendChild(newItem);	    
+            html='';   
+		}
+	}
+};
+
+fillContactUsForm = function(element){
+	var list = document.getElementById(element);
+	 html='';
+	 
+	if(app_settings = getAppSettings()){
+		dump(app_settings.contact_us.contact_content);
+		if(!empty(app_settings.contact_us.contact_content)){
+			 html+='<ons-list-item modifier="nodivider">';
+		         html+='<p class="small">'+ app_settings.contact_us.contact_content +'</p>';
+		      html+='</ons-list-item>';
+		      var newItem = ons.createElement(html);
+              list.appendChild(newItem);	    
+              html='';   
+		}		
+				
+		$.each( app_settings.contact_us.contact_field  , function( key, val ) {
+			
+			label = '';
+			click_action='';
+			field_type='text';
+			
+			switch(val){
+				case "name":
+				  label = t("Name");
+				break;
+				
+				case "email":
+				  label = t("Email address");
+				  field_type ="email";
+				break;
+				
+				case "phone":
+				  val = 'contact_phone';
+				  label = t("Contact Number");
+				  click_action='onclick="showPage(\'enter_phone.html\')"';
+				break;
+				
+				case "country":
+				  label = t("Country");
+				break;
+				
+				case "message":
+				  label = t("Message");
+				break;
+			}
+			
+			html+='<ons-list-item>';
+	         html+='<div class="center">';
+	           html+='<ons-input type="'+ field_type +'" name="'+val+'" id="'+val+'" class="'+ val +'" required modifier="transparent" '+ click_action +' ';
+	           html+='placeholder="'+ label +'" float ></ons-input>';
+	          html+='</div>';
+	        html+='</ons-list-item>';
+	        
+	        var newItem = ons.createElement(html);
+            list.appendChild(newItem);	    
+            html='';   
+			
+		});
+		
+		background_url = app_settings.images.image3;
+		$("#contact_us .header_contact").css('background-image', 'url('+ "'" + background_url + "'" +')');
+		
+	}
 };

@@ -14,10 +14,10 @@ var push_handle;
 var translator;
 var dict = {};
 
-var device_id   = 'device_123';
-var device_uiid = 'uiid_123456';
+var device_id   = 'device_1231';
+var device_uiid = 'uiid_1234561';
 var device_platform = 'android';
-var code_version = 1;
+var code_version = 1.3;
 
 var timer;
 var ajax_timeout = 30000;
@@ -35,6 +35,10 @@ var modal_content='';
 var exit_cout = 0;
 var analytics;
 var track_history_interval;
+var track_interval_timeout = 7000;
+var sec = 0;
+
+var startup_banner_interval;
 
 /*END VARIABLES*/
 
@@ -101,16 +105,25 @@ ons.ready(function() {
 	
 	onsenNavigator = document.getElementById('onsenNavigator');
 	
-	/*RESET DATA*/
-	/*removeStorage("location_lat");
-	removeStorage("user_token");*/
-			
-	//removeStorage("client_set_lang");
+	/*RESET DATA*/		
+		
+	//localStorage.clear();
+	/*	
+	removeStorage("location_lat");
+	removeStorage("user_token");			
+	removeStorage("location_data_city");	
+	removeStorage("location_data_area");				
+	removeStorage("location_data_postal");			
+	removeStorage('transaction_type');
+	removeStorage('recheck_location');
+	*/
+		
 	removeStorage("next_step");
 	removeStorage("cart_re_order");
 	removeStorage("delivery_date_set");
 	removeStorage("delivery_date_set_pretty");	
-	removeStorage("delivery_time_set");
+	removeStorage("delivery_time_set");	
+	removeStorage("active_merchant_category");
 	//removeStorage("tooltip_home");
 	//removeStorage("device_id");	
 	
@@ -122,7 +135,7 @@ ons.ready(function() {
 		switch (current_page_id){
 			case "receipt":
 			lat_res = getCurrentLocation();
-			resetToPage('tabbar.html','slide',{
+			resetToPage('tabbar.html','none',{
 		    	 lat : lat_res.lat,
 		  	   	 lng : lat_res.lng,
 		    });
@@ -164,6 +177,37 @@ ons.ready(function() {
 	
 	tabbar_loaded = false;
 	
+	
+	$( document ).on( "keyup", ".numeric_only", function() {
+       this.value = this.value.replace(/[^0-9\.]/g,'');
+    });	 
+    
+	$( document ).on( "click", ".subitem_custom", function() {
+		object = $(this);
+		var limited = object.data("limited");
+		dump("limited: "+ limited);
+		var total_check=0;	
+		
+		var id=$(this).data("id");	
+		dump("id: "+ id);
+		
+		$('.subitem_custom input:checked').each(function(){ 
+			dump($(this));
+		 	if ( $(this).parent().data("id") == id){
+		 		total_check++;
+		 	}
+		});	
+		dump("total_check=>" + total_check) ;
+				
+		if (limited<total_check){
+			dump(object);
+			showAlert( t('Sorry but you can select only')  +  " " + limited  + " " + t("addon") );
+			dump(object.find("input"));			
+			object.prop('checked', false);			
+		}
+		
+	});
+	
 });
 /*END ONSEN*/
 
@@ -176,6 +220,10 @@ function onDeviceReady(){
 		navigator.splashscreen.hide();	
 		device_uiid = device.uuid;
 		device_platform = device.platform;		
+		
+		if(device.platform=="android" || device.platform=="Android" ){
+		   StatusBar.backgroundColorByHexString("#ef6625");
+		}
 		
 		initPush(false);
 				
@@ -350,11 +398,15 @@ document.addEventListener('init', function(event) {
    dump("page_id = "+page_id);  
 
    
-   if( page_id!="map_select_location" ){
-     $(".search-input ").removeClass("search-input--material");
+   if( page_id!="map_select_location" || page_id!="select_location" ){
+     $(".search-input").removeClass("search-input--material");
    }
       
    translatePage();
+   
+   if(page_id!="page_startup2"){
+   	  StopStartUpBanner();
+   }
    
    switch(page_id)
    {
@@ -397,15 +449,15 @@ document.addEventListener('init', function(event) {
    	  break;
    	     	     	 
    	  case "create_account":
-   	     	       	   
-   	    placeholder("#first_name", "First Name" );
-   	    placeholder("#last_name", "Last Name" );
-   	    placeholder("#contact_phone", "Mobile" );
-   	    placeholder("#email_address", "Email" );
-   	    placeholder("#password", "Password" );
-   	    placeholder("#cpassword", "Confirm Password" );   	    
+   	     	       	      	    
+   	    createAccountFields();
    	  
    	    get_customField();
+   	    
+   	    setTimeout(function() {		
+		   addTermsCondition('create_account_list');
+        }, 100);    	    
+   	    
    	    next_step = getStorage("next_step");
    	    dump("next_step=>"+ next_step);
    	    if(!empty(next_step)){
@@ -487,18 +539,36 @@ document.addEventListener('init', function(event) {
    	  break;
    	  
    	  case "home":
- 	
-   	    current_latlng = getCurrentLocation();
-   	    if(!empty(current_latlng)){
-   	    	if(!empty(current_latlng.address)){
-   	    	   $(".print_location_address").html( current_latlng.address );
+ 	      	    
+   	    /*RTL CODE*/
+   	    current_lang_code = getLanguageCode();
+   	    if(isRTL(current_lang_code)){
+   	       $("ons-button ons-icon").attr("icon","ion-ios-arrow-left");
+   	    }
+   	       	  
+   	    if(isLocation()){
+   	    	if ( location_res = getLocationData() ){  
+   	    		dump(location_res);
+   	    		$(".print_location_address").html( location_res.pretty_address );   	    		
+   	    		params = "search_type=byLatLong";	
+	   	    	processDynamicAjax('searchMerchant', params , 'search_results_wrapper');
+	   	    	   	    		
    	    	} else {
    	    		$(".print_location_address").html( t("location not set") );
-   	    	}
-   	    	params = "search_type=byLatLong&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;   	    	
-   	    	processDynamicAjax('searchMerchant', params , 'search_results_wrapper');   	    	   	    	
+   	    	}   	    	
    	    } else {
-   	    	$(".print_location_address").html( t("location not set") );
+	   	    current_latlng = getCurrentLocation();
+	   	    if(!empty(current_latlng)){
+	   	    	if(!empty(current_latlng.address)){
+	   	    	   $(".print_location_address").html( current_latlng.address );
+	   	    	} else {
+	   	    		$(".print_location_address").html( t("location not set") );
+	   	    	}
+	   	    	params = "search_type=byLatLong";	
+	   	    	processDynamicAjax('searchMerchant', params , 'search_results_wrapper');
+	   	    } else {
+	   	    	$(".print_location_address").html( t("location not set") );
+	   	    }
    	    }
    	        	    
    	    /*LOAD ALL PAGES IN HOMEPAGE*/  
@@ -508,6 +578,8 @@ document.addEventListener('init', function(event) {
    	    
    	    AnalyticsTrack("page home"); 
    	    
+   	    ageRestriction();
+   	    
    	  break;
    	  
    	  case "restaurant_list":
@@ -516,16 +588,21 @@ document.addEventListener('init', function(event) {
          ons.modifier.remove(page_white, 'page_white');
          ons.modifier.add(page_white, 'page_column');*/
    	     
+   	     if(isLocation()){
+   	        $(".sort_by").val("restaurant_name");
+   	     }
+   	     
+   	     clearForm('frm_filter');
+   	        	     
    	     placeholder(".search_for_restaurant", t("Search for restaurant") );
             	  
    	     search_type = page.data.search_type;
    	     dump("search_type =>"+ search_type);   	        	     
    	     $(".search_type").val( search_type );
    	        	     
-   	     current_latlng = getCurrentLocation();
-   	     $(".print_location_address").html( current_latlng.address );
+   	     setCurrentAddress();
    	     
-   	     params = "search_type="+search_type+"&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;   	     
+   	     params = "search_type="+search_type;
    	     params+="&with_distance=1";
    	     params+="&sort_by=" + $(".sort_by").val();
    	     
@@ -556,12 +633,8 @@ document.addEventListener('init', function(event) {
    	  
    	  case "search_merchant":   	     	
    	       	    
-   	    placeholder(".search_field_by_name", t("Search for restaurant") );
-   	  
-   	    current_latlng = getCurrentLocation();
-   	    if(!empty(current_latlng)){
-   	    	$(".print_location_address").html( current_latlng.address );
-   	    }
+   	    placeholder(".search_field_by_name", t("Search for restaurant") );   	  
+   	    setCurrentAddress();
    	       	    
    	    setTimeout(function() {		
  		   setFocus('search_field_by_name');
@@ -577,7 +650,7 @@ document.addEventListener('init', function(event) {
 				search_field_by_name = $(this).val();
 				dump("search_field_by_name=>"+ search_field_by_name);
 				if(!empty(search_field_by_name)){
-					data = "merchant_name="+ search_field_by_name;
+					data = "merchant_name="+ search_field_by_name;					
 				    processDynamicAjax('searchByMerchantName',data,'search_field_by_name_result','GET',1);
 				} else {										
 					if(!empty(ajax_array[1])){						
@@ -593,7 +666,7 @@ document.addEventListener('init', function(event) {
    	  
    	  
    	  case "cuisine_list":   	  
-   	    
+   	       	    
    	    placeholder(".search_for_cuisine", t("Search for cuisine") );
    	    getCuisine();   	    
    	    initPullHook('cuisine_list',  'cuisine_list_pull_hook');   	       	    
@@ -621,7 +694,7 @@ document.addEventListener('init', function(event) {
 				dump("search_field_by_name=>"+ search_field_by_name);
 				if(!empty(search_field_by_name)){
 					data = "cuisine_name="+ search_field_by_name;
-					data+= "&sort_fields=cuisine_name";
+					data+= "&sort_fields=cuisine_name";														   
 				    processDynamicAjax('searchByCuisine',data,'search_field_by_cuisine_result','GET',1);
 				} else {										
 					if(!empty(ajax_array[1])){						
@@ -636,7 +709,9 @@ document.addEventListener('init', function(event) {
    	  break;
    	  
    	  case "restaurant_page":
-   	     	    
+
+   	     setCartTheme();	    
+   	  
    	     removeStorage("click_tab");
    	     
    	     merchant_id = page.data.merchant_id;   
@@ -663,11 +738,21 @@ document.addEventListener('init', function(event) {
          }, 1000); 
          
          AnalyticsTrack("page merchant page"); 
+                  
+         cart_theme = getCartTheme();
+         if(cart_theme==2){		
+	         setTimeout(function() {			         	
+	 		   processDynamicAjax('getActiveMerchantCategory',params );
+	         }, 1); 
+         }
    	     
    	  break;
    	  
    	  case "item_page":
    	     	       	       	  
+   	    setCartTheme();
+   	    setCloseMerchant();
+   	    
    	    cat_id = page.data.cat_id;   	
    	    $("#item_page .cat_id").val( cat_id );
    	       	    
@@ -725,7 +810,8 @@ document.addEventListener('init', function(event) {
    	  
    	  case "item_details":
    	     	    
-   	  
+   	    setCloseMerchant();
+   	    
    	    merchant_id = getActiveMerchantID();
    	    data = "cat_id="+page.data.cat_id;   	
    	    data += "&item_id="+page.data.item_id;   
@@ -788,11 +874,13 @@ document.addEventListener('init', function(event) {
    	    setTimeout(function() {		
  		   setFocus("mobile_no");
         }, 500); 
+        
+        fillEnterPhone();
    	    
    	    old_phone = $(".contact_phone").val();   	       	       	       	    
    	    if(settings = getAppSettings()){
-   	       if(!empty(settings.mobile_prefix)){
-   	       	  $(".prefix").val( settings.mobile_prefix );   	       	  
+   	       if(!empty(settings.mobile_prefix)){   	       	  
+   	       	  $(".moobile_prefix").val( settings.mobile_prefix );   	       	  
    	       	  if(!empty(old_phone)){
    	       	     res = old_phone.replace( settings.mobile_prefix , "");
    	       	     $(".mobile_no").val( res );
@@ -824,23 +912,24 @@ document.addEventListener('init', function(event) {
    	     	setTimeout(function() {		
  		      setFocus('order_change');
             }, 500);   
+                       
    	     }
    	     
    	     $(".pay_now_label").html( t("PAY")+ " " + $(".cart_total_value").val() );
    	        	     
-   	     placeholder("#dinein_number_of_guest", "Number Of Guests" );
-   	     placeholder("#dinein_table_number", "Number Of Guests" );
+   	     placeholder("#dinein_number_of_guest", "Number Of Guests" );   	     
+   	     placeholder("#dinein_table_number", "Table number" );
    	     placeholder(".contact_phone", "Contact Number" );  
    	     placeholder(".dinein_special_instruction", "Special instructions" );  
    	     
    	     placeholder(".order_change", "Enter amount" );  
    	        	     
-   	     if(settings = getAppSettings()){
+   	     /*if(settings = getAppSettings()){
 	   	  	 dump(settings);
 	   	  	 if(settings.cod_change_required=="2"){	   	  	 	
 	   	  	 	$(".order_change").attr("required",'required');
 	   	  	 }   	  	 
-	   	  }   	  
+	   	  } */
    	  
 	   	  customer_number = getStorage("customer_number");
 	   	  if(!empty(customer_number)){
@@ -855,7 +944,7 @@ document.addEventListener('init', function(event) {
    	    AnalyticsTrack("page receipt"); 
    	  break;
    	  
-   	  case "address_form":   	   
+   	  case "address_form":   	      	    
    	    placeholder(".street", "Street" );
    	    placeholder(".city", "City" );
    	    placeholder(".state", "State" );
@@ -864,11 +953,7 @@ document.addEventListener('init', function(event) {
    	    placeholder(".delivery_instruction", "Delivery instructions" );   	    
    	    placeholder(".contact_phone", "Contact Number" );   	    
    	     
-   	    params='';
-   	    if ( lat_res = getCurrentLocation()){
-   	    	params+="lat="+lat_res.lat;
-   	    	params+="&lng="+lat_res.lng;
-   	    }
+   	    params='';   	    
    	    processAjax('GetAddressFromCart',params);
    	  break;
    	  
@@ -951,7 +1036,7 @@ document.addEventListener('init', function(event) {
    	  break;
    	  
    	  case "add_review":   	       	    
-   	    placeholder(".review", "Search" );	       	    
+   	    placeholder(".review", "What do you think of your order?" );
    	    order_id = page.data.order_id;
    	    processAjax('getOrderDetails','order_id='+ order_id, 'GET', 'skeleton4');   	    
    	    
@@ -960,7 +1045,11 @@ document.addEventListener('init', function(event) {
    	  break;
    	     	  
    	  case "track_history":
-   	     	    
+
+   	    if(app_settings = getAppSettings()){ 
+   	    	track_interval_timeout = app_settings.tracking_interval;   	    	
+   	    }
+   	  
    	    order_id = page.data.order_id;   	    
    	    $(".track_order_id").val( order_id );   	    
    	    params = 'order_id='+ order_id;
@@ -1298,12 +1387,26 @@ document.addEventListener('init', function(event) {
    	  break;
    	  
    	  case "restaurant_list_map":
-   	     	        	  
-   	     current_latlng = getCurrentLocation();
+   	     	     	        	  
+   	     if(isLocation()){		
+   	     	if(app_settings = getAppSettings()){
+   	     		current_latlng = app_settings.default_map_location;
+   	     	}   	     	
+   	     } else {
+   	     	current_latlng = getCurrentLocation();
+   	     }   	        	        	     
+   	     
+   	     if(empty(current_latlng)){
+   	     	current_latlng = {
+   	     		lat : 0,
+   	     		lng : 0
+   	     	};  	
+   	     }
+   	     
    	     merchantMapList("#map_list", current_latlng.lat, current_latlng.lng);
    	     
    	     search_type = $(".search_type").val();   	     
-   	     params = "search_type="+search_type+"&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;   	     
+   	     params = "search_type="+search_type; 
    	     params+="&map_page=1";   	     
    	     cuisine_id = $(".cuisine_id").val();
    	     if(!empty(cuisine_id)){
@@ -1314,10 +1417,11 @@ document.addEventListener('init', function(event) {
    	     
    	     processAjax('searchMerchant',params);
    	     
-   	     AnalyticsTrack("page restaurant_list_map"); 
+   	     AnalyticsTrack("page restaurant_list_map");    	        	     
    	  break;
    	  
    	  case "order_verification":   	    
+   	     placeholder(".order_sms_code", "Enter Code" ); 
          sendOrderSMSCode();
    	  break;
    	  
@@ -1369,9 +1473,19 @@ document.addEventListener('init', function(event) {
    	  
    	  case "track_driver":   	    
    	     stopTrackHistory();
-   	     document.querySelector('ons-progress-bar').setAttribute('value',0);
+   	     //document.querySelector('ons-progress-bar').setAttribute('value',0);
    	     track_order_id = $(".track_order_id").val();
-   	     processAjax("TaskInformation","order_id="+ track_order_id ,'GET');
+   	     //processAjax("TaskInformation","order_id="+ track_order_id ,'GET');   	     
+   	     if(app_settings = getAppSettings()){   	     	
+   	     	fillTrackTemplate(app_settings.tracking_theme);
+   	     } else {
+   	     	fillTrackTemplate(1);
+   	     }
+   	     
+   	    setTimeout(function() {		
+ 		   document.querySelector('ons-progress-bar').setAttribute('value',0);
+   	       processAjax("TaskInformation","order_id="+ track_order_id ,'GET');   	     
+        }, 100);    	     
    	     
    	     AnalyticsTrack("page track_driver"); 
    	  break;
@@ -1460,11 +1574,321 @@ document.addEventListener('init', function(event) {
    	    $(".startup_carousel").css("height", banner_height+"px");
    	    
    	    fillStartupBanner('.startup_carousel');
+   	    setTimeout(function() {
+   	    	initStartUpBanner();
+   	    }, 100);
    	  break;
    	  
    	  case "page_startup_select_language":
    	    processDynamicAjax('getlanguageList2','','language2_list_loader','GET',1 ); 
    	    initPullHook('language_list2', 'language2_list_pull_hook');
+   	  break;
+   	     	     	  
+   	  case "select_location":   	    
+   	     	    
+        removeStorage("location_data_state");
+   	    removeStorage("location_data_city2");
+   	    
+   	    LocationSearchForm('#select_location .search_wrapper');   	    
+   	    setTimeout(function() {			
+		  $(".search-input").removeClass("search-input--material");
+	   }, 100);
+	   
+	   location_mode = locationMode();
+	   	   
+	   if(location_mode==1){
+		  $( ".area_name" ).keyup(function( event ) {
+	   	    	if ( event.which == 13 ) {
+				    event.preventDefault();
+				} else {
+					$(this).val('');
+				}
+	   	  }); 
+	   } else if( location_mode==2) {	   	  
+	   	  $( ".city_name" ).keyup(function( event ) {
+	   	    	if ( event.which == 13 ) {
+				    event.preventDefault();
+				} else {
+					$(this).val('');
+				}
+	   	  }); 
+	   }
+	   
+   	  break;
+   	  
+   	  case "location_city":
+   	       	    
+   	    location_mode = locationMode();
+   	  
+   	    placeholder("#location_city .location_city", "City" );   	     
+   	     
+   	    setTimeout(function() {		
+ 		   setFocus('field_location_city');
+        }, 200); 
+        
+        params_city='';
+        is_address_book = page.data.address_book;        
+        if(is_address_book==1){
+           params_city = "state_id="+ page.data.state_id;
+           $(".is_address_book").val(1);
+        } else {
+        	removeStorage("location_data_area2");        	
+        	if(location_mode==2){
+        	    params_city+="&state_id=" + $("#select_location .state_id").val();
+            }
+        }                   
+   	     
+   	    processDynamicAjax('CityList',params_city,'location_city_result_loader','GET',1 ); 
+   	    initPullHook('location_city_result', 'location_city_pull_hook', params_city);
+   	    initInfiniteScroll(page, 'CityList', 'location_city', params_city);		
+   	    
+   	    $( "#field_location_city" ).keyup(function( event ) {
+   	    	if ( event.which == 13 ) {
+			    event.preventDefault();
+			} else {
+				
+				destroyList('location_city_result');				
+				search_field_by_name = $(this).val();
+				dump("search_field_by_name=>"+ search_field_by_name);
+				
+				if(!empty(search_field_by_name)){
+					data = "search_str="+ search_field_by_name;					
+					data+="&"+params_city;
+				    processDynamicAjax('CityList',data,'location_city_result_loader','GET',1);
+				} else {										
+					if(!empty(ajax_array[1])){						
+					    ajax_array[1].abort();
+					}
+				}
+			}
+   	    });   	     
+   	  break;
+   	  
+   	  case "location_area":
+   	    placeholder("#location_area .field_location_area", "District / Area" );
+   	    
+   	    setTimeout(function() {		
+ 		   setFocus('field_location_area');
+        }, 200); 
+        
+        if(page.data.address_book==1){
+           $(".is_address_book").val(1);
+        }
+        
+        params_area = "city_id="+ page.data.city_id;
+        processDynamicAjax('AreaList', params_area ,'location_area_result_loader','GET',1 ); 
+        initPullHook('location_area_result', 'location_area_pull_hook', params_area);
+        initInfiniteScroll(page, 'AreaList', 'location_area' , params_area);		
+   	    
+         $( "#field_location_area" ).keyup(function( event ) {
+   	    	if ( event.which == 13 ) {
+			    event.preventDefault();
+			} else {
+				
+				destroyList('location_area_result');				
+				search_field_by_name = $(this).val();
+				dump("search_field_by_name=>"+ search_field_by_name);
+				
+				if(!empty(search_field_by_name)){
+					data = "search_str="+ search_field_by_name;
+					data+= "&"+params_area;
+				    processDynamicAjax('AreaList',data,'location_area_result_loader','GET',1);
+				} else {										
+					if(!empty(ajax_array[1])){						
+					    ajax_array[1].abort();
+					}
+				}
+			}
+   	    });   	     
+   	    
+   	  break;
+   	  
+   	  case "address_book_location":
+   	  
+   	    removeStorage("location_data_state1");
+   	    removeStorage("location_data_city1");
+   	    removeStorage("location_data_area1");
+   	    
+   	    $( ".city_name" ).keyup(function( event ) {
+   	    	if ( event.which == 13 ) {
+			    event.preventDefault();
+			} else {
+				$(this).val('');
+			}
+   	    }); 
+   	    
+   	    $( ".area_name" ).keyup(function( event ) {
+   	    	if ( event.which == 13 ) {
+			    event.preventDefault();
+			} else {
+				$(this).val('');
+			}
+   	    }); 
+   	    
+   	    placeholder("#frm_address_book_location .street", "Street" );
+   	    placeholder("#frm_address_book_location .state_name", "State/Region" );
+   	    placeholder("#frm_address_book_location .city_name", "City" );
+   	    placeholder("#frm_address_book_location .area_name", "Distric/Area/neighborhood" );
+   	    placeholder("#frm_address_book_location .location_name", "Floor/unit/Room #" );
+   	    placeholder("#frm_address_book_location .delivery_instruction", "Delivery instructions" );
+   	    
+   	    id = page.data.id;
+   	    if(!empty(id)){
+   	       processAjax('getAddressBookLocationByID',"id=" + id );
+   	    } else {
+   	       //processAjax('getCountryList',"");
+   	       initMapAdress('#map_address', true);
+   	    }
+   	    
+   	  break;
+   	  
+   	  case "location_state":   	    
+   	     	    
+   	    dump("is_address_book=>"+page.data.address_book);
+   	    if(page.data.address_book==1){
+   	       $(".is_address_book").val(page.data.address_book);
+   	    }   	    
+   	    placeholder("#location_state .field_location_state", "State/Region" );
+   	    
+   	    setTimeout(function() {		
+ 		   setFocus('field_location_state');
+        }, 200); 
+                
+        processDynamicAjax('StateList', '' ,'location_state_result_loader','GET',1 ); 
+        initPullHook('StateList', 'location_state_pull_hook');
+        initInfiniteScroll(page, 'StateList', 'location_state');	
+        
+        $( "#field_location_state" ).keyup(function( event ) {
+   	    	if ( event.which == 13 ) {
+			    event.preventDefault();
+			} else {
+				
+				destroyList('location_state_result');				
+				search_field_by_name = $(this).val();
+				dump("search_field_by_name=>"+ search_field_by_name);
+				
+				if(!empty(search_field_by_name)){
+					data = "search_str="+ search_field_by_name;					
+				    processDynamicAjax('StateList',data,'location_state_result_loader','GET',1);
+				} else {										
+					if(!empty(ajax_array[1])){						
+					    ajax_array[1].abort();
+					}
+				}
+			}
+   	    });   	     
+        
+      break;  
+      
+      case "address_form_location":
+                        
+        is_agree_map = getStorage("is_agree_map");
+        
+        if(is_agree_map!=1){
+	        ons.platform.select('ios');  
+		    ons.notification.confirm( t("Please point your exact location on the map") ,{
+				title: t("Delivery Address"),
+				id : "dialog_remove_item",
+				buttonLabels : [ t("OK") ]
+			}).then(function(input) {
+				if (input==0){			
+					setStorage("is_agree_map",1);
+				}
+			});
+        }
+               
+        removeStorage("location_data_state1");
+   	    removeStorage("location_data_city1");
+   	    removeStorage("location_data_area1");
+   	    
+   	    $( ".city_name" ).keyup(function( event ) {
+   	    	if ( event.which == 13 ) {
+			    event.preventDefault();
+			} else {
+				$(this).val('');
+			}
+   	    }); 
+   	    
+   	    $( ".area_name" ).keyup(function( event ) {
+   	    	if ( event.which == 13 ) {
+			    event.preventDefault();
+			} else {
+				$(this).val('');
+			}
+   	    }); 
+   	    
+   	    placeholder("#frm_address_form_location .street", "Street" );
+   	    placeholder("#frm_address_form_location .state_name", "State/Region" );
+   	    placeholder("#frm_address_form_location .city_name", "City" );
+   	    placeholder("#frm_address_form_location .area_name", "Distric/Area/neighborhood" );
+   	    placeholder("#frm_address_form_location .location_name", "Floor/unit/Room #" );
+   	    placeholder("#frm_address_form_location .delivery_instruction", "Delivery instructions" );
+   	    placeholder("#frm_address_form_location .contact_phone", "Contact Number" );
+   	    
+   	    processAjax('GetAddressFromCartLocation','');  	    
+   	    
+      break;  
+      
+      case "address_form_select_location":
+        processAjax('getAddressLocationBookDropDown', '');
+   	       	    
+   	    placeholder(".contact_phone", t("Contact Number") );
+   	    placeholder(".delivery_instruction", t("Delivery instructions") );
+   	    
+   	    customer_number = getStorage("customer_number");
+	   	if(!empty(customer_number)){
+	   	   $(".contact_phone").val( customer_number );
+	   	}
+      break;  
+      
+      case "location_postal_code":
+        dump("is_address_book=>"+page.data.address_book);
+   	    if(page.data.address_book==1){
+   	       $(".is_address_book").val(page.data.address_book);
+   	    }   	    
+   	    placeholder("#location_postal_code .field_location_postal_code", "Postal Code/Zip Code" );
+   	    
+   	    setTimeout(function() {		
+ 		   setFocus('field_location_postal_code');
+        }, 200); 
+        
+        processDynamicAjax('PostalCodeList', '' ,'location_postal_code_result_loader','GET',1 ); 
+        initPullHook('PostalCodeList', 'location_postal_code_pull_hook');
+        initInfiniteScroll(page, 'PostalCodeList', 'location_postal_code','');	
+        
+         $( "#field_location_postal_code" ).keyup(function( event ) {
+   	    	if ( event.which == 13 ) {
+			    event.preventDefault();
+			} else {
+				
+				destroyList('location_postal_code_result');				
+				search_field_by_name = $(this).val();
+				dump("search_field_by_name=>"+ search_field_by_name);
+				
+				if(!empty(search_field_by_name)){
+					data = "search_str="+ search_field_by_name;					
+				    processDynamicAjax('PostalCodeList',data,'location_postal_code_result_loader','GET',1);
+				} else {										
+					if(!empty(ajax_array[1])){						
+					    ajax_array[1].abort();
+					}
+				}
+			}
+   	    });   	      
+         
+   	    
+      break;  
+                	  
+   	  case "contact_us":
+   	    fillContactUsForm('contact_field_list');   	       	     
+   	  break; 
+   	  
+   	  case "contact_us_ty":
+   	    $(".contact_us_message").html( page.data.message );
+   	    var page = onsenNavigator.topPage; 
+   	    page.onDeviceBackButton = function(event) {   	    	
+   	    	resetToPage('tabbar.html','none');
+   	    };
    	  break;
    	  
    	  default:
@@ -1509,7 +1933,7 @@ getLanguageCode = function(){
 setLanguage = function(lang_code){	
 	if(!empty(lang_code)){
 	   setStorage("client_set_lang", lang_code);
-	   //translatePage();
+	   InitRTL(lang_code);
 	   resetToPage('tabbar.html','none');
 	}
 };
@@ -1520,22 +1944,16 @@ placeholder = function(field, value){
 
 loadHomePage = function(){	
     app_settings = getAppSettings();	
-    
-    params_lat_lng='';
-    current_latlng = getCurrentLocation();
-    if(!empty(current_latlng)){
-    	params_lat_lng = "&lat="+current_latlng.lat+"&lng="+ current_latlng.lng
-    }
-    
+            
     if(app_settings.home.mobile2_home_offer==1){
-       params = 'search_type=special_Offers'+ params_lat_lng;       
+       params = 'search_type=special_Offers';       
        processDynamicAjax('searchMerchant', params, 'special_offers_wrapper');
     } else {
     	$("#special_offers_wrapper").hide();
     }
     
     if(app_settings.home.mobile2_home_featured==1){
-       params = 'search_type=featuredMerchant'+ params_lat_lng;       
+       params = 'search_type=featuredMerchant';       
        processDynamicAjax('searchMerchant', params , 'featured_list_wrapper');
     } else {
     	$("#featured_list_wrapper").hide();
@@ -1546,7 +1964,7 @@ loadHomePage = function(){
     	$("#all_restaurant_wrapper").hide();
     }
     if(app_settings.home.mobile2_home_cuisine==1){
-       processDynamicAjax('cuisineList', 'carousel=1', 'cuisine_list_wrapper');
+       processDynamicAjax('cuisineList', 'carousel=1&', 'cuisine_list_wrapper');
     } else {
     	$("#cuisine_list_wrapper").hide();
     }
@@ -1559,6 +1977,15 @@ loadHomePage = function(){
 	    }
     } else {
     	$("#favorite_restaurant_wrapper").hide();
+    }
+    
+    if(app_settings.home.mobile2_home_banner==1){
+    	home_banner_count = app_settings.home_banner.length ;    	
+    	if(home_banner_count>0){
+    		fillHomeBanner( app_settings.home_banner , '.home_banner_wrapper');
+    	} else $("#home_banner_wrapper").hide();    	
+    } else {
+    	$("#home_banner_wrapper").hide();
     }
 }
 
@@ -1577,17 +2004,19 @@ document.addEventListener('postpop', function(event) {
 	dump("postpop");
 	current_page = document.querySelector('ons-navigator').topPage.id
 	dump("=>"+ current_page);
+	
+	ons.platform.select('android'); 
+	
 	switch (current_page){
 		case "page_startup":
 		break;
 		
-		/*case "login":
-		  if(isLogin()){
-		  	 resetToPage('tabbar.html','none');
-		  }
-		break;*/
+		case "page_startup2":
+		  initStartUpBanner();
+		break;
 		
 		case "tabbar":
+		      removeStorage("active_merchant_category");
 			  active_index = document.querySelector('ons-tabbar').getActiveTabIndex();
 			  dump("active_index=>"+ active_index);
 			  
@@ -1597,7 +2026,8 @@ document.addEventListener('postpop', function(event) {
 			  	 if(cart_re_order==1){
 			  	 	removeStorage("cart_re_order");
 			  	 	getCartCount();
-			  	 }
+			  	 }			  	 
+			  	 setCurrentAddress();
 			  }
 			  
 			  if(active_index==3){
@@ -1624,6 +2054,9 @@ document.addEventListener('postpop', function(event) {
 		      $("#carousel_resto_menu ons-carousel-item").removeClass("selected");		      
 		      $("#carousel_resto_menu ons-carousel-item:nth-child("+click_tab+")").addClass("selected");		      
 	      }
+	      
+	      ReSetBasket();
+	      
 	    break;
 	    
 	    case "favorite_list":
@@ -1649,9 +2082,111 @@ document.addEventListener('postpop', function(event) {
 	    case "order_list":
 	      stopTrackHistory();
 	    break;
-	    	    	   
+	    	    	    	    	  
+	    case "cart":
+	       enabledAsap();
+	    break;
+	    
+	    case "address_book_location":
+	    case "address_form_location":
+	       data_state = getStorage("location_data_state1");	       
+	       if(!empty(data_state)){
+	       	  data_state = JSON.parse( data_state );	 
+	          $(".state_name").val( data_state.state_name );
+	          $(".state_id").val( data_state.state_id );	          	         	         
+	       }
+	       
+	       data_city = getStorage("location_data_city1");	       	       
+	       if(!empty(data_city)){
+	       	  data_city = JSON.parse( data_city );	 	       	  
+	          $(".city_name").val( data_city.city_name );
+	          $(".city_id").val( data_city.city_id );
+	       } else {
+	       	   $(".city_name").val('');
+	          $(".city_id").val('');
+	       }
+	       
+	       data_area = getStorage("location_data_area1");	       	       
+	       if(!empty(data_area)){
+	       	  data_area = JSON.parse( data_area );	 	       	  
+	          $(".area_name").val( data_area.area_name );
+	          $(".area_id").val( data_area.area_id );
+	       } else {
+	       	  $(".area_name").val('');
+	          $(".area_id").val('');
+	       }	       
+	    break;
+	    
+	    case "select_location":
+	    
+	       location_mode = locationMode();
+	       
+	       if(location_mode==1){
+		       data_city = getStorage("location_data_city2");	
+		       if(!empty(data_city)){
+		       	  data_city = JSON.parse( data_city );	 	       	  
+		          $("#select_location .city_name").val( data_city.city_name );
+		          $("#select_location .city_id").val( data_city.city_id );
+		       } else {
+		       	   $("#select_location .city_name").val('');
+		           $("#select_location.city_id").val('');
+		       }
+		       
+		       data_area = getStorage("location_data_area2");	       	       
+		       if(!empty(data_area)){
+		       	  data_area = JSON.parse( data_area );	 	       	  
+		          $("#select_location .area_name").val( data_area.area_name );
+		          $("#select_location .area_id").val( data_area.area_id );
+		       } else {
+		       	  $("#select_location .area_name").val('');
+		          $("#select_location .area_id").val('');
+		       }	   
+	       } else if ( location_mode == 2) {
+	       	  data_state = getStorage("location_data_state");	
+	       	  if(!empty(data_state)){
+	       	  	 data_state = JSON.parse( data_state );		       	  	 
+	       	  	 $("#select_location .state_id").val( data_state.state_id );
+	       	  	 $("#select_location .state_name").val( data_state.state_name );
+	       	  } else {
+	       	  	 $("#select_location .state_id").val( '' );
+	       	  	 $("#select_location .state_name").val( '' );
+	       	  }
+	       	  
+	       	  data_city = getStorage("location_data_city2");	
+	       	  if(!empty(data_city)){	       	  	 
+	       	  	 data_city = JSON.parse( data_city );		       	  	 	       	  	 
+	       	  	 $("#select_location .city_id").val( data_city.city_id );
+	       	  	 $("#select_location .city_name").val( data_city.city_name );
+	       	  } else {
+	       	  	 $("#select_location .city_id").val( '' );
+	       	  	 $("#select_location .city_name").val( '' );
+	       	  }
+	       	  
+	       } else if ( location_mode == 3) {	       	   
+	       	   data_postal = getStorage("location_data_postal2");	
+	       	   if(!empty(data_postal)){
+	       	   	   data_postal = JSON.parse( data_postal );
+	       	   	   dump(data_postal);
+	       	   	   $("#select_location .postal_code").val( data_postal.postal_code );
+	       	   	   $("#select_location .city_id").val( data_postal.city_id );
+	       	   	   $("#select_location .state_id").val( data_postal.state_id );
+	       	   } else {
+	       	   	  $("#select_location .postal_code").val( '' );
+	       	   	  $("#select_location .city_id").val( '' );
+	       	   	  $("#select_location .state_id").val( '');
+	       	   }
+	       }
+	       
+	       
+	    break;	   
+	    
+	    case "item_page":
+	      ReSetBasket();
+	    break;	   
+	    	    
 	}
 });
+/*END postpop*/
 
 document.addEventListener('preopen', function(event) {
 	dump("preopen");
@@ -1676,6 +2211,7 @@ document.addEventListener('postchange', function(event) {
 			  console.log('Changed to ' + event.activeIndex);	
 			  $(".dots li").removeClass("active");
 			  $(".c"+ event.activeIndex).addClass("active");
+			  $(".startup_banner_index").val(event.activeIndex);
 		  }
 		break;
 		
@@ -1706,6 +2242,10 @@ document.addEventListener('postchange', function(event) {
 		  	  showCart();
 		  }
 		break;
+		
+		case "cart":
+		  enabledAsap();
+		break;
 	}	
 });
 
@@ -1730,6 +2270,13 @@ document.addEventListener('preshow', function(event) {
 		  	 count = $("#resto_sortlist ons-list-item").length;
 		  	 if(count<=0){
 		  	    sortList(app_settings.sort.restaurant, 'resto_sortlist');
+		  	    
+		  	    $( document ).on( "click", "#sortbyresto input[name=sortby]", function() {		  	    	
+		  	    	if($(this).val()=="ratings"){		  	    		
+		  	    		$(".sort_asc_desc").val("desc");
+		  	    	}
+		  	    });
+		  	    
 		  	 }
 		  }
 		break;
@@ -1801,6 +2348,10 @@ document.addEventListener('prehide', function(event) {
 		  }
 		break;
 		
+		case "filter_item":
+		  //ReSetBasket();
+		break;
+		
 		default:
 		ons.platform.select('android');
 		break;
@@ -1859,7 +2410,7 @@ t = function(data){
 	return translator.get(data);
 };
 
-requestParams = function(){
+requestParams = function(action){
 	data ='';
 	data+="&device_id=" + device_id;
 	data+="&device_platform=" + device_platform;
@@ -1880,12 +2431,40 @@ requestParams = function(){
 	
 	data+="&lang="+ getLanguageCode();
 	
-	/*current_page_id = onsenNavigator.topPage.id;	
-	if(current_page_id=="page_settings"){
-		data+="&lang=null";
-	} else {
-		data+="&lang="+ getLanguageCode();
-	}	*/
+	dump("requestParams=>"+action);
+	
+			
+	switch(action){
+   	  case "setDeliveryAddress":
+   	  case "SetLocation":
+   	  case "StateList":
+   	  case "CityList":
+   	  case "AreaList":
+   	  case "saveAddressBookLocation":
+   	  case "setDeliveryLocation":
+   	  case "mapboxgeocode":
+   	  break;
+   	  
+   	  default:     	
+   	  	if(settings = getAppSettings()){
+			if(settings.search_mode=="address"){			
+				if(lat_res = getCurrentLocation()){			     
+					data+="&lat="+ lat_res.lat + "&lng=" + lat_res.lng;
+				}
+			} else {				
+				if ( location_res = getLocationData() ){
+					if(location_res.location_mode==1){
+						data+="&city_id="+ location_res.city_id + "&area_id=" + location_res.area_id;
+					} else if( location_res.location_mode==2){
+						data+="&state_id="+ location_res.state_id + "&city_id=" + location_res.city_id;
+					} else if( location_res.location_mode==3){
+						data+="&city_id="+ location_res.city_id + "&postal_code=" + location_res.postal_code;
+					}
+				}
+			}
+		}   	   	 
+   	  break;
+    }						   
 	
 	return data;
 };
@@ -1902,7 +2481,7 @@ processAjax = function(action, data , method, loader_type){
 		
 	var ajax_uri = ajax_url+"/"+action;
 		
-	data+=requestParams();
+	data+=requestParams(action);
 	
 	dump("ACTION=>" + action );
 	dump("METHOD=>" + method );
@@ -1949,6 +2528,19 @@ processAjax = function(action, data , method, loader_type){
      			     setStorage("app_settings", JSON.stringify(data.details.settings) );  
      			     dict = data.details.settings.dict; 
      			     
+     			     if(data.details.settings.map_provider.provider=="mapbox"){
+     			     	 $('head').append('<link rel="stylesheet" href="lib/leaflet/leaflet.css" type="text/css" />');
+		     	   	     $('head').append('<link rel="stylesheet" href="lib/leaflet/plugin/routing/leaflet-routing-machine.css" type="text/css" />');
+		     	   	     $('head').append('<link rel="stylesheet" href="lib/leaflet/plugin/geocoder/mapbox-gl-geocoder.css" type="text/css" />');
+		     	   	     		     	   	 
+		     	   	     $('head').append('<script src="lib/leaflet/leaflet.js"></script>');
+		     	   	     $('head').append('<script src="lib/leaflet/plugin/routing/leaflet-routing-machine.min.js"></script>');
+		     	   	     $('head').append('<script src="lib/leaflet/plugin/geocoder/mapbox-gl-geocoder.min.js"></script>');
+     			     }     		
+
+     			     current_lang_code = getLanguageCode();
+     			     InitRTL(current_lang_code);
+     			          
      			     removeStorage("cart_merchant_id");
      			     
      			     is_login = data.details.valid_token;
@@ -1957,19 +2549,36 @@ processAjax = function(action, data , method, loader_type){
      			     
      			     /*SET ANALYTIC*/
      			     AnalyticsSet();
+     			     is_location = isLocation();
+     			     
+     			     if(is_location){
+     			        if(location_res = getLocationData()){
+     			           lat=1;     			           
+     			        } else { 
+     			           lat='';
+     			        }
+     			     }
      			     
      			     if(is_login==1 && !empty(lat)){
+     			     	if(!is_location){
+     			     	    recheckLocation();
+     			     	}     			     
      			     	onsenNavigator.resetToPage("tabbar.html",{
-					  	   animation : "slide" ,  	
+					  	   animation : "none" ,  	
 					  	   data : {
 					  	   	  lat : lat,
 					  	   	  lng : lng,
 					  	   }
 					    });
-     			     } else if( is_login==1 && empty(lat) ){
-     			     	 onsenNavigator.resetToPage('map_select_location.html',{
-				  	        animation : "fade",		  	
-				         });	
+     			     } else if( is_login==1 && empty(lat) ){        			     	  			     	
+     			     	  if(is_location){     	     		
+     			     	  	reset_to_page = 'select_location.html';	     	  	
+     			     	  } else {     			     	  	     			     	  	
+     			     	  	reset_to_page = 'map_select_location.html';
+     			     	  }     		     			     	  
+     			     	  onsenNavigator.resetToPage(reset_to_page,{
+					  	    animation : "fade",		  	
+					      });
      			     } else {
      			     	 
      			     	 removeStorage("user_token");
@@ -2015,35 +2624,26 @@ processAjax = function(action, data , method, loader_type){
 	        	  
 	        	  next_step = getStorage("next_step");
 	        	  dump("next_step=>"+ next_step);
-	        	  if(!empty(next_step)){	        	  	 
-	        	  	// next step
-	        	  	nextStep( next_step );
-	        	  } else {	        	  	
-	        	  	if ( lat_res = getCurrentLocation()){	        	  		
-	        	  		resetToPage('tabbar.html','slide',{
-	        	  			 lat : lat_res.lat,
-	        	  			 lng : lat_res.lng,
-	        	  		});
-	        	  	} else {	        	  			        	  	
-		        	    resetToPage( "map_select_location.html" );
-	        	  	}
+	        	  if(!empty(next_step)){	        	  	 	        	  	
+	        	  	  nextStep( next_step );
+	        	  } else {	        	  		        	  	
+	        	  	  showHomeOrSelect();
 	        	  }	        		  	        	  
 	        	break;
 	        	
 	        	case "createAccount":	 
 	        	case "registerUsingFb":       
 	        	case "googleLogin":	
-	        	      	
-	        	 if(data.details.next_step=="verification_mobile" || data.details.next_step=="verification_email" ){	        	 	
-	        	 	
-	        	 	showToast( data.msg );
-	        	 	
+	        	
+	        	  dump("next step=>"+ data.details.next_step );      	
+	        	
+	        	 if(data.details.next_step=="verification_mobile" || data.details.next_step=="verification_email" ){
+	        	 	showToast( data.msg );	        	 	
 	        	 	next_step = '';
 	        	 	next_step = getStorage("next_step");
 	        	 	if(empty(next_step)){
 	        	 		next_step='map_select_location';
-	        	 	}	        	 	
-	        	 	//onsenNavigator.pushPage("verification.html" ,{
+	        	 	}	        	 		        	 	
 	        	 	onsenNavigator.replacePage("verification.html" ,{
 					  	   animation : "none" ,  	
 					  	   data : {
@@ -2054,9 +2654,10 @@ processAjax = function(action, data , method, loader_type){
 					  	   	  "verification_type" : data.details.next_step,
 					  	   }
 					 });  
-	        	 } else if ( data.details.next_step =="map_select_location"){
+					 
+	        	 /*} else if ( data.details.next_step =="map_select_location"){
 	        	 	setStorage('user_token', data.details.customer_token );
-	        	 	loadTabbar( data.details.next_step );
+	        	 	loadTabbar( data.details.next_step );*/
 	        	 	
 	        	 } else if ( data.details.next_step == "payment_option") {	  
 	        	 		        	 	 
@@ -2083,6 +2684,7 @@ processAjax = function(action, data , method, loader_type){
 	        	case "searchMerchant":
 	        	  if ( data.details.map_page==1){
 	        	  	  merchantMapSetList(data.details.list);
+	        	  	  carouselMap(data.details.list,'.bottom-bar--bottom_toolbar_carousel');
 	        	  } else {	        
 		        	  $('.sort_btn').attr("disabled",false); 
 		        	  $(".total_number_found").html( data.msg );
@@ -2101,8 +2703,10 @@ processAjax = function(action, data , method, loader_type){
 		        	  }
 		        	  initRatyStatic();
 	        	  }	        	  	   
-
-	        	  imageLoaded(); 
+	        	  	        	  
+	        	  setTimeout(function() {				     
+				 	  imageLoaded(); 
+				   }, 10);
 	        	   	        	
 	        	break;
 	        	
@@ -2117,7 +2721,12 @@ processAjax = function(action, data , method, loader_type){
 	        	break;
 	        	
 	        	case "getRestaurantInfo":
-	        	
+	        	 	        	  
+	        	  $(".merchant_open_status").val( data.details.data.status_raw);
+	        	  if(data.details.data.status_raw=="close"){
+	        	  	 showToast(data.details.data.close_message);
+	        	  }     		
+	        	  
 	        	  $(".merchant_lat").val( data.details.data.latitude);
 	        	  $(".merchant_lng").val( data.details.data.lontitude);
 	        	  $(".merchant_name").val( data.details.data.restaurant_name);
@@ -2148,7 +2757,8 @@ processAjax = function(action, data , method, loader_type){
 	        	  setStorage("share_options", JSON.stringify(data.details.data.share_options) );  
 	        	  
 	        	  initRatyStatic();
-	        	  imageLoaded(); 
+	        	  imageLoaded(); 	        	  
+	        	  setCloseMerchant();
 	        	    
 	        	break;
 	        	
@@ -2175,6 +2785,7 @@ processAjax = function(action, data , method, loader_type){
 	        	
 	        	case "loadCart":
 	        	
+	        	  clearBasket();
 	        	  initRatyStatic();
 	        	  setStorage("merchant_settings", JSON.stringify(data.details.merchant_settings) );  
 	        	  
@@ -2218,7 +2829,7 @@ processAjax = function(action, data , method, loader_type){
 	        	case "removeVoucher":
 	        	case "applyTips":
 	        	case "removeTip":
-	        	  loadCart();
+	        	  loadCart();	        	 
 	        	break;
 	        	
 	        	case "servicesList":
@@ -2243,6 +2854,8 @@ processAjax = function(action, data , method, loader_type){
 	        	
 	        	case "setDeliveryAddress":	       
 	        	case "setAddressBook": 		
+	        	case "setDeliveryLocation":
+	        	case "setAddressBookLocation":
 	        		        	        	   	        	   	        	   	  	        	  	        	   
 	        	   onsenNavigator.popPage();
 	        	   
@@ -2267,7 +2880,7 @@ processAjax = function(action, data , method, loader_type){
 		    	
 		    	case "payNow":
 		    	case "PayAuthorize":
-		    	case "razorPaymentSuccessfull":
+		    	case "razorPaymentSuccessfull":		    	
 	        	   payNowNextStep(data);
 	        	break;
 	        	
@@ -2280,7 +2893,7 @@ processAjax = function(action, data , method, loader_type){
 	        	   }
 	        	break;
 	        	
-	        	case "GetAddressFromCart":	        	   
+	        	case "GetAddressFromCart":	      	        	
 	        	   filAddress('#address_form', data.details);
 	        	   fillCountry("#address_form", data.details.country_list, data.details.country_code);
 	        	   
@@ -2384,9 +2997,10 @@ processAjax = function(action, data , method, loader_type){
 	        	
 	        	case "DeleteAddressBook":
 	        	case "saveAddressBook":
+	        	case "saveAddressBookLocation":
 	        	  showToast( data.msg );
 	        	  current_page_id = onsenNavigator.topPage.id;
-	        	  if (current_page_id =="address_book"){
+	        	  if (current_page_id =="address_book" || current_page_id=="address_book_location"){
 	        	  	   popPage(); 
 	        	  }
 	        	  params="&page_action=pull_refresh";
@@ -2491,7 +3105,7 @@ processAjax = function(action, data , method, loader_type){
    	    	          loadHomePage();
 	               } else {
 		               onsenNavigator.resetToPage("tabbar.html",{
-					  	   animation : "slide" ,  	
+					  	   animation : "none" ,  	
 					  	   data : {
 					  	   	  lat : data.details.data.lat ,
 					  	   	  lng : data.details.data.lng ,
@@ -2615,7 +3229,8 @@ processAjax = function(action, data , method, loader_type){
     		  
     		     $("#item_page .center span.print_category_name").html( data.details.category.category_name );
     		     
-    		     setCategoryCarousel( data.details.category_list , data.details.category.cat_id );
+    		         		     
+    		     setCategoryCarousel( data.details.category_list , data.details.category.cat_id );    		     
     		     
     		     if ( data.details.page_action=="pull_refresh"){ 
     		     	$("#resto_list_item").html('');			  	
@@ -2797,6 +3412,135 @@ processAjax = function(action, data , method, loader_type){
 	               } 	               
 	               setBookingDetails(data.details.data,'booking_details_list');
 	            break;
+	            	            	            
+	            case "getAddressBookLocationByID":	              
+	              $.each(data.details.data, function(key, val){
+	              	  if(key!="as_default"){
+	              	     setValue("#address_book_location ."+key, val);	
+	              	  }
+	              });
+	              
+	              data_state = {
+					state_name :data.details.data.state_name,
+					state_id:data.details.data.state_id,
+					country_id:data.details.data.country_id,
+					country_name:''
+				  };	
+				  setStorage("location_data_state1", JSON.stringify(data_state) ); 
+				  
+				  data_city = {
+					city_name :data.details.data.city_name,
+					city_id:data.details.data.city_id,
+					state_id:data.details.data.state_id,
+					country_id:data.details.data.country_id
+				  };	
+				  setStorage("location_data_city1", JSON.stringify(data_city) ); 
+				  
+				  data_area = {
+					area_id :data.details.data.area_id,
+					area_name:data.details.data.area_name,		
+				 };	
+				  setStorage("location_data_area1", JSON.stringify(data_area) ); 
+				              
+	              if(data.details.data.as_default==1){
+	        	      document.querySelector('ons-checkbox').checked = true;
+	        	  } else {
+	        	   	  document.querySelector('ons-checkbox').checked = false;
+	        	  }
+	        	  
+	        	  lat = data.details.data.lat;
+	        	  lng = data.details.data.lng;
+	        	  if(!empty(lat)){	        	  	  
+	        	  	  $("#address_book_location .lat").val( lat );
+	        	  	  $("#address_book_location .lng").val( lng );
+	        	  	  fillMapAddress('#map_address', true, lat , lng );
+	        	  } else {
+	        	  	  initMapAdress('#map_address', true);
+	        	  }
+	        	  
+	            break;
+	            
+	            case "GetAddressFromCartLocation":
+	              $.each(data.details, function(key, val){
+	              	 if(key!="save_address"){
+	              	    setValue("#address_form_location ."+key, val);	
+	              	 }
+	              });
+	              
+	              data_state = {
+					state_name :data.details.state_name,
+					state_id:data.details.state_id,
+					country_id:data.details.country_id,
+					country_name:''
+				  };	
+				  setStorage("location_data_state1", JSON.stringify(data_state) ); 
+				  
+				  data_city = {
+					city_name :data.details.city_name,
+					city_id:data.details.city_id,
+					state_id:data.details.state_id,
+					country_id:data.details.country_id
+				  };	
+				  setStorage("location_data_city1", JSON.stringify(data_city) ); 
+				  
+				  data_area = {
+					area_id :data.details.area_id,
+					area_name:data.details.area_name,		
+				 };	
+				  setStorage("location_data_area1", JSON.stringify(data_area) ); 
+	              
+	              if(data.details.save_address==1){
+	        	      document.querySelector('ons-checkbox').checked = true;
+	        	   } else {
+	        	   	  document.querySelector('ons-checkbox').checked = false;
+	        	   }
+	              
+	              if(!empty(data.details.lat)){
+	              	 fillMapAddress('#map_address', true, data.details.lat, data.details.lng );
+	              } else {
+	              	 initMapAdress('#map_address', true); 
+	              }     	
+	              
+	              if(empty(data.details.street) && empty(data.details.state_name) ){
+	              	 fillAddressForm();
+	              }     		
+	              
+	            break;
+	            
+	            case "getAddressLocationBookDropDown":
+	        	  tpl = fillAddressBook(data.details.data);
+	        	  $('#address_form_select_location .address_book_wrap').html( tpl );
+	        	break;	 
+	        		        	
+	        	case "preCheckout":
+	        	
+	        	  if(data.details.future_order==1){	        	  	
+	        	  	 if(data.details.future_order_confirm==1){
+		        	  	ons.platform.select('ios');  
+						ons.notification.confirm( data.details.future_order_message ,{
+							title: dialog_title,
+							id : "dialog_cancel_order",
+							buttonLabels : [ t("Yes"), t("Cancel") ]
+						}).then(function(input) {
+							if (input==0){			
+								checkout();
+							}
+						});		        
+						return;  		  
+		        	  } 	        			        	  
+	        	  } 	        	  
+	        	  checkout();    		
+	        		        	
+	        	break;
+	        	
+	        	case "ContactSubmit":
+	        	  onsenNavigator.pushPage('contact_us_ty.html',{
+				  	animation : "slide",
+				  	data : { 					  	  
+				  	  'message': data.msg					  	  
+				  	 }
+				  });  	        	  
+	        	break;
 	        		        	      
      			default:
      			 showToast( data.msg );
@@ -2926,7 +3670,7 @@ processAjax = function(action, data , method, loader_type){
 	        	   fav = favoriteButton(false);
 	        	   $(".favorite_toolbar_wrap").html(fav);
 	        	break;
-	        	  
+	        		        		        	  
      			default:
      			 showToast( data.msg );
      			break;
@@ -2945,9 +3689,9 @@ processAjax = function(action, data , method, loader_type){
           
     /*FAIL*/
     ajax_request.fail(function( jqXHR, textStatus ) {
-    	clearTimeout(timer);    	
-    	showToast( t("Failed") + ": " + textStatus );
-        dump("failed ajax " + textStatus );
+    	clearTimeout(timer);        	
+    	showToast( t("Failed") + ": " + textStatus + "\n" + jqXHR.responseText );
+        dump("failed ajax " + textStatus );        
     });     
     
    } catch(err) {
@@ -2978,11 +3722,12 @@ getMerchantSettings = function(){
 
 getDefaultCountry = function(){
 	if(app_settings = getAppSettings()){
-		dump(app_settings.map_country);
-		return app_settings.map_country;
-	} else {
-		return '';
-	}
+		geocomplete_default_country = app_settings.geocomplete_default_country;
+		if(geocomplete_default_country=="yes"){		  
+		  return app_settings.map_country;
+		}
+	} 
+	return '';
 };
 
 showPage = function(page_id, animation, data){
@@ -3057,6 +3802,23 @@ insertPage = function(page_id, animation, data){
 
 
 submitForm = function(form_name, action_name , method ){
+			
+		
+	switch(action_name){
+		case "createAccount":
+		  if ($('#check_terms_condition').is(':visible')) {
+				check_terms_condition = $("input[name=check_terms_condition]:checked").val();		
+				if(empty(check_terms_condition)){
+					showAlert( t("You must agree to terms and condition") );
+					return false;
+				}			
+			}
+		break;
+		
+		default:
+		break;
+	}
+	
 	$(form_name).validate({
    	    submitHandler: function(form) {
    	    	 var params = $( form_name ).serialize();   	    	 
@@ -3095,6 +3857,9 @@ var setMobileNuber = function(){
 	$(".frm_setphone").validate({
    	   submitHandler: function(form) {
    	      prefix = $(".moobile_prefix").val();
+   	      if(empty(prefix)){
+   	      	 prefix='';
+   	      }
    	      phone = $(".mobile_no").val();
    	      complete_phone = prefix+phone;   	      
    	      popPage();
@@ -3201,7 +3966,7 @@ processDynamicAjax = function(action, data , target,  method , single_call){
 	
 	endpoint = ajax_url+"/"+action;
 	
-	data+=requestParams();
+	data+=requestParams(action);
 	
 	dump(endpoint);
 	
@@ -3305,7 +4070,7 @@ processDynamicAjax = function(action, data , target,  method , single_call){
     			break;
     			
     			case "getMerchantMenu":
-    			  
+    			    			      			  
     			  if ( data.details.page_action=="pull_refresh"){ 
     			  	  $("#resto_list_category").html('');			  	
     			  	  setPaginate("#restaurant_page", data.details.paginate_total);  
@@ -3362,6 +4127,7 @@ processDynamicAjax = function(action, data , target,  method , single_call){
 	           
 	           case "removeCartItem":
 	        	  loadCart();
+	        	  clearBasket();
 	        	break;
 	        	
 	        	case "OrderList":
@@ -3724,6 +4490,62 @@ processDynamicAjax = function(action, data , target,  method , single_call){
 	               	  runTrackHistory();
 	               }    		
 	            break;
+	            	            
+	            case "CityList":
+	              if ( data.details.page_action=="pull_refresh"){ 
+	        	   	  $("#location_city_result").html('');			  	
+    			  	  setPaginate("#location_city", data.details.paginate_total);  
+    			  	  setCityList( data.details.data ,'location_city_result' );
+	        	   } else if (data.details.page_action=="infinite_scroll") {  
+	        	   	   setCityList( data.details.data ,'location_city_result' );
+	        	   } else {
+		        	   setPaginate("#location_city", data.details.paginate_total);  
+	    		       setCityList( data.details.data ,'location_city_result' );
+	        	   }
+	            break;
+	            
+	            case "AreaList":
+	               if ( data.details.page_action=="pull_refresh"){ 
+	        	   	   $("#location_area_result").html('');			  	
+    			  	   setPaginate("#location_area", data.details.paginate_total);  
+    			  	   setAreaList( data.details.data ,'location_area_result' );
+	        	   } else if (data.details.page_action=="infinite_scroll") {  
+	        	   	   setAreaList( data.details.data ,'location_area_result' );
+	        	   } else {
+		        	   setPaginate("#location_area", data.details.paginate_total);  
+	    		       setAreaList( data.details.data ,'location_area_result' );
+	        	   }
+	            break;
+	            
+	             case "StateList":
+	              if ( data.details.page_action=="pull_refresh"){ 
+	        	   	  $("#location_state_result").html('');			  	
+    			  	  setPaginate("#location_state", data.details.paginate_total);  
+    			  	  setStateList( data.details.data ,'location_state_result' );
+	        	   } else if (data.details.page_action=="infinite_scroll") {  
+	        	   	   setStateList( data.details.data ,'location_state_result' );
+	        	   } else {
+		        	   setPaginate("#location_state", data.details.paginate_total);  
+	    		       setStateList( data.details.data ,'location_state_result' );
+	        	   }
+	            break;
+	            
+	            case "PostalCodeList":
+	              if ( data.details.page_action=="pull_refresh"){ 
+	        	   	  $("#location_postal_code_result").html('');			  	
+    			  	  setPaginate("#location_postal_code", data.details.paginate_total);  
+    			  	  setPotalList( data.details.data ,'location_postal_code_result' );
+	        	   } else if (data.details.page_action=="infinite_scroll") {  
+	        	   	   setPotalList( data.details.data ,'location_postal_code_result' );
+	        	   } else {
+		        	   setPaginate("#location_postal_code", data.details.paginate_total);  
+	    		       setPotalList( data.details.data ,'location_postal_code_result' );
+	        	   }
+	            break;
+	            
+	            case "getActiveMerchantCategory":
+	              setStorage("active_merchant_category", JSON.stringify(data.details.data) );  
+	            break;
 	            
     		}    		
     	} else if ( data.code== 6 ) {  // empty list
@@ -3825,6 +4647,10 @@ processDynamicAjax = function(action, data , target,  method , single_call){
     		    
     		    case "getOrderHistory2":
     		      stopTrackHistory();
+    		    break; 
+    		        		    
+    		    case "getActiveMerchantCategory":
+    		      setStorage("active_merchant_category",'');  
     		    break; 
     		        		    
     			default:
@@ -3946,9 +4772,8 @@ setSortBy = function(){
 reloadSearchResult = function(){
 	$("#list_restaurant").html('');
 	
-	search_type = $(".search_type").val();
-	current_latlng = getCurrentLocation();
-    params = "search_type="+search_type+"&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;   	     
+	search_type = $(".search_type").val();	
+    params = "search_type="+search_type;
     params+="&with_distance=1";
     params+="&sort_by=" + $("#restaurant_list .sort_by").val();
     params+="&sort_asc_desc=" + $("#sortbyresto .sort_asc_desc").val();
@@ -3985,8 +4810,10 @@ destroyList = function(element){
 };
 
 setFocus = function(element){
-	try {
-	    document.getElementById( element )._input.focus();
+	try {	    	    
+	    setTimeout(function(){
+		   document.getElementById( element )._input.focus();
+		},200);
 	 } catch(err) {
         dump(err);
      } 
@@ -4032,17 +4859,11 @@ initPullHook = function(id, element, data){
 		case "home":
 
 		  pullHook[timenow].onAction = function(done) {
-		  	
-		  	current_latlng = getCurrentLocation();
-	   	    if(!empty(current_latlng)){
-	   	    	params = "search_type=byLatLong&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;	   	    
-	   	    	processDynamicAjax('searchMerchant', params , 'search_results_wrapper');
-	   	    }
-   	    
-			 /*processDynamicAjax('searchMerchant', 'search_type=special_Offers', 'special_offers_wrapper');
-			 processDynamicAjax('searchMerchant', 'search_type=featuredMerchant', 'featured_list_wrapper');
-			 processDynamicAjax('searchMerchant', 'search_type=allMerchant', 'all_restaurant_wrapper');
-			 processDynamicAjax('cuisineList', '', 'cuisine_list_wrapper');*/
+		  			  	
+	   	    
+   	    	params = "search_type=byLatLong";
+   	    	processDynamicAjax('searchMerchant', params , 'search_results_wrapper');
+	   	    			 
 			 loadHomePage();
    	            
 		     setTimeout(function() {				     
@@ -4054,9 +4875,8 @@ initPullHook = function(id, element, data){
 		
 		case "restaurant_list":
 		    pullHook[timenow].onAction = function(done) {
-		       	search_type = $(".search_type").val();
-		       	current_latlng = getCurrentLocation();
-   	            params = "search_type="+search_type+"&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;   	     
+		       	search_type = $(".search_type").val();		       	
+   	            params = "search_type="+search_type;
    	            params+="&with_distance=1";
    	            params+="&sort_by=" + $(".sort_by").val();
    	            params+="&page_action=pull_refresh";
@@ -4085,7 +4905,7 @@ initPullHook = function(id, element, data){
 		    pullHook[timenow].onAction = function(done) {		       	
 		    	
 		    	var params = $(".frm_cuisine").serialize();
-		    	params+="&page_action=pull_refresh";
+		    	params+="&page_action=pull_refresh";		    	
 		    	processDynamicAjax('cuisineList',params,'cuisine_loader','GET','1');
 		    	
 		        setTimeout(function() {				     
@@ -4351,12 +5171,67 @@ initPullHook = function(id, element, data){
 			};    
 		break;
 		
+		case "location_city_result":		    
+		    pullHook[timenow].onAction = function(done) {					
+		    	destroyList('location_city_result');
+			    params="&page_action=pull_refresh";
+			    if(!empty(data)){
+			    	params+="&"+ data;
+			    }
+			    processDynamicAjax('CityList',params,'location_city_result_loader','GET',1 ); 
+			    setTimeout(function() {				     
+			 		done();
+			    }, 1000); 
+			};    
+		break;
+		
+		case "location_area_result":
+		   pullHook[timenow].onAction = function(done) {	
+		   	    destroyList('location_area_result');				
+			    params="&page_action=pull_refresh";
+			    params+="&"+data;
+			    processDynamicAjax('AreaList',params,'location_area_result_loader','GET',1 ); 
+			    setTimeout(function() {				     
+			 		done();
+			    }, 1000); 
+			};    
+		break;
+		
+		case "StateList":
+		   pullHook[timenow].onAction = function(done) {	
+		   	    destroyList('location_state_result');				
+			    params="&page_action=pull_refresh";
+			    if(!empty(data)){
+			       params+="&"+data;
+			    }
+			    processDynamicAjax('StateList',params,'location_state_result_loader','GET',1 ); 
+			    setTimeout(function() {				     
+			 		done();
+			    }, 1000); 
+			};    
+		break;
+		
+		case "PostalCodeList":
+		   pullHook[timenow].onAction = function(done) {	
+		   	    destroyList('location_state_result');				
+			    params="&page_action=pull_refresh";
+			    if(!empty(data)){
+			       params+="&"+data;
+			    }
+			    processDynamicAjax('PostalCodeList',params,'location_postal_code_result_loader','GET',1 ); 
+			    setTimeout(function() {				     
+			 		done();
+			    }, 1000); 
+			};    
+		break;
+		
 		default:
 		 dump("id =>"+ id);
 		break;
 		
 	}
 };
+/*end initPullHook*/
 
 fillRestaurantList = function(data){	
 	list_type = getListType(); 	
@@ -4389,7 +5264,7 @@ setterMenu = function(data){
 };
 
 getCuisine = function(){
-	var params = $(".frm_cuisine").serialize();
+	var params = $(".frm_cuisine").serialize();		
    	processAjax('cuisineList',params,'GET','skeleton6');
 };
 
@@ -4426,7 +5301,7 @@ initInfiniteScroll = function(object, action , element_id, datas){
 	 		   if(paginate_page>paginate_total){
 	 		   	  dump('finish');	 		   	  
 	 		   	  done();
-	 		   } else {
+	 		   } else {	 		   	  
 	 		   	  processDynamicAjax("cuisineList", data , "cuisine_loader",  "GET");
 	 		   	  setTimeout(function(){	
 	 		  	    done();
@@ -4437,7 +5312,8 @@ initInfiniteScroll = function(object, action , element_id, datas){
 	 		
 	 		case "restaurant_list":
 	 		  
-	 		  params = "search_type="+search_type+"&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;   	     
+	 		  //params = "search_type="+search_type+"&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;   	     
+	 		  params = "search_type="+search_type;
 	          params+="&with_distance=1";
 	          params+="&sort_by=" + $(".sort_by").val();
 	          params+="&page_action=infinite_scroll";
@@ -4465,7 +5341,7 @@ initInfiniteScroll = function(object, action , element_id, datas){
 	 		
 	 		case "restaurant_page":
 	 		
-	 		  params = "search_type="+search_type+"&lat="+current_latlng.lat+"&lng="+ current_latlng.lng ;   	     
+	 		  params = "search_type="+search_type;
 	          params+="&with_distance=1";	          
 	          params+="&page_action=infinite_scroll";
    	            
@@ -4759,9 +5635,114 @@ initInfiniteScroll = function(object, action , element_id, datas){
 	 		   
 	 		break;
 	 		
+	 		case "CityList":
+	 		
+	 		  params='';
+		      paginate_page = parseInt($("#"+element_id+" .paginate_page").val());
+	 		  params+="&page="+ paginate_page;
+	 		  
+	 		  paginate_page = paginate_page+1;	 		 		  
+	 		  $("#"+element_id+" .paginate_page").val(paginate_page);
+	 		  
+	 		  paginate_total = $("#"+element_id+" .paginate_total").val( );
+	 		  if(paginate_page>paginate_total){
+	 		  	 dump('finish');	 		   	  
+	 		   	 done();
+	 		  } else {
+	 		  	 dump('call ajax infinite');	 		  	 	 			 		  	  
+	   	          params+="&page_action=infinite_scroll";	
+	   	          if(!empty(datas)){
+	   	          	  params+="&"+datas;
+	   	          }
+		          processDynamicAjax('CityList',params,'location_city_result_loader','GET' );
+	 		  	  setTimeout(function(){	
+	 		  	    done();
+	 		  	  }, 1000);	 		  	 
+	 		  }
+	 		
+	 		break;
+	 		
+	 		case "AreaList":
+	 			 		
+	 		  params='';
+		      paginate_page = parseInt($("#"+element_id+" .paginate_page").val());
+	 		  params+="&page="+ paginate_page;
+	 		  
+	 		  paginate_page = paginate_page+1;	 		 		  
+	 		  $("#"+element_id+" .paginate_page").val(paginate_page);
+	 		  	 		  
+	 		  paginate_total = $("#"+element_id+" .paginate_total").val( );
+	 		  if(paginate_page>paginate_total){
+	 		  	 dump('finish');	 		   	  
+	 		   	 done();
+	 		  } else {
+	 		  	 dump('call ajax infinite');	 		  	 	 			 		  	  
+	   	          params+="&page_action=infinite_scroll";	  
+	   	          if(!empty(datas)){
+	   	          	  params+="&"+datas;
+	   	          }
+		          processDynamicAjax('AreaList',params,'location_area_result_loader','GET' );
+	 		  	  setTimeout(function(){	
+	 		  	    done();
+	 		  	  }, 1000);	 		  	 
+	 		  }
+	 		
+	 		break;
+	 		
+	 		case "StateList":
+	 		  params='';
+		      paginate_page = parseInt($("#"+element_id+" .paginate_page").val());
+	 		  params+="&page="+ paginate_page;
+	 		  
+	 		  paginate_page = paginate_page+1;	 		 		  
+	 		  $("#"+element_id+" .paginate_page").val(paginate_page);
+	 		  	 		  
+	 		  paginate_total = $("#"+element_id+" .paginate_total").val( );
+	 		  if(paginate_page>paginate_total){
+	 		  	 dump('finish');	 		   	  
+	 		   	 done();
+	 		  } else {
+	 		  	 dump('call ajax infinite');	 		  	 	 			 		  	  
+	   	          params+="&page_action=infinite_scroll";	  
+	   	          if(!empty(datas)){
+	   	          	  params+="&"+datas;
+	   	          }
+		          processDynamicAjax('StateList',params,'location_state_result_loader','GET' );
+	 		  	  setTimeout(function(){	
+	 		  	    done();
+	 		  	  }, 1000);	 		  	 
+	 		  }
+	 		break;
+	 		
+	 		case "PostalCodeList":
+	 		  params='';
+		      paginate_page = parseInt($("#"+element_id+" .paginate_page").val());
+	 		  params+="&page="+ paginate_page;
+	 		  
+	 		  paginate_page = paginate_page+1;	 		 		  
+	 		  $("#"+element_id+" .paginate_page").val(paginate_page);
+	 		  	 		  
+	 		  paginate_total = $("#"+element_id+" .paginate_total").val( );
+	 		  if(paginate_page>paginate_total){
+	 		  	 dump('finish');	 		   	  
+	 		   	 done();
+	 		  } else {
+	 		  	 dump('call ajax infinite');	 		  	 	 			 		  	  
+	   	          params+="&page_action=infinite_scroll";	  
+	   	          if(!empty(datas)){
+	   	          	  params+="&"+datas;
+	   	          }
+		          processDynamicAjax('PostalCodeList',params,'location_postal_code_result_loader','GET' );
+	 		  	  setTimeout(function(){	
+	 		  	    done();
+	 		  	  }, 1000);	 		  	 
+	 		  }
+	 		break;
+	 		
 	 	} /*end siwthc*/
 	 };
 };
+/*end initInfiniteScroll*/
 
 resetPaginate = function(element){
 	$( element + " .paginate_total").val( 0 );
@@ -4783,7 +5764,7 @@ setCategoryList = function(data, element){
 	if(app_settings = getAppSettings()){		  	 	  	
 	   menu_type = app_settings.menu_type;
     }
-    dump("menu_type=>"+ menu_type);
+    dump("menu_typex=>"+ menu_type);
     switch(menu_type){    	
     	case "1":
     	  restaurantCategory( data , element );
@@ -5083,16 +6064,16 @@ var addToCart = function(){
 
 var loadCart = function(transaction_type){	
 	
-	merchant_id = getActiveMerchantID();
-	
+	merchant_id = getActiveMerchantID();	
+	      
 	if(!empty(transaction_type)){
 		processAjax('loadCart','transaction_type='+ transaction_type + "&merchant_id=" + merchant_id , 'GET' ,'skeleton3');
 	} else {
 		transaction_type_set = getStorage("transaction_type");		
 		if(!empty(transaction_type_set)){
-			processAjax('loadCart','transaction_type='+ transaction_type_set + "&merchant_id="+merchant_id,'GET','skeleton3');
+			processAjax('loadCart','transaction_type='+ transaction_type_set + "&merchant_id="+merchant_id ,'GET','skeleton3');
 		} else {
-			processAjax('loadCart','merchant_id=' + merchant_id,'GET','skeleton3');
+			processAjax('loadCart','merchant_id=' + merchant_id ,'GET','skeleton3');
 		}	    
 	}
 };
@@ -5119,14 +6100,24 @@ var getCartCount = function(){
 	var ajax_uri = ajax_url+"/getCartCount/?temp=1"+ requestParams();	
 	params = "merchant_id=" + getActiveMerchantID();
 	
+	transaction_type_set = getStorage("transaction_type");
+	if(!empty(transaction_type_set)){
+	   params+="&transaction_type="+transaction_type_set;
+	}
+	
+	cart_theme = getCartTheme();
+	
 	var ajax_cart_count = $.post(ajax_uri, params , function(data){
 		dump(data);		
+		if(cart_theme==2){		   
+		   setBasket(data.details);
+		}
 		if (data.code==1){
 			$(".cart_count").html(data.details.count);
 			$(".tabbar__badge").html(data.details.count);
 		} else {			
 			$(".cart_count").html('');
-			$(".tabbar__badge").html('');
+			$(".tabbar__badge").html('');			
 		}
 	}, "json")
 	
@@ -5246,6 +6237,7 @@ confirmClearCart = function(){
 	}).then(function(input) {
 		if (input==0){			
 			processAjax("clearCart",'');
+			removeStorage("delivery_asap_enabled");
 		}
 	});
 };
@@ -5258,6 +6250,7 @@ hideDialog = function(id) {
 clearCart = function(){
 	hideDialog('clear_cart_dialog'); 
 	processAjax("clearCart",'');
+	removeStorage("delivery_asap_enabled");
 };
 
 var showTransactionList = function(){
@@ -5294,6 +6287,7 @@ var setFieldValue = function(class_name, value , label ){
 		  dialog.hide();
 		  $(".delivery_time_label").html('');
 		  $(".delivery_time").val('');
+		  removeStorage("delivery_time_set");
 		break;
 		
 		case "delivery_time":
@@ -5305,6 +6299,7 @@ var setFieldValue = function(class_name, value , label ){
 		  var delivery_asap = document.getElementById('delivery_asap');
 		  if(!empty(delivery_asap)){
 		     delivery_asap.checked = false;
+		     removeStorage("delivery_asap_enabled");
 		  }
 		  
 		break;
@@ -5317,6 +6312,7 @@ clearCartDiv = function(){
     $(".cart_count").html('');
     $(".tabbar__badge").html('');
     $(".bottom_toolbar_checkout").hide();
+    clearBasket();    
 };
 
 var showDeliveryDateList = function(){
@@ -5348,18 +6344,27 @@ setAsap = function(){
     if (is_selected=="true" || is_selected == true){    	
     	$(".delivery_time").val('');
     	$(".delivery_time_label").html('');
-    	removeStorage("delivery_time_set");
+    	removeStorage("delivery_time_set");  
+    	setStorage("delivery_asap_enabled", 1);
     } else {
-    	
+    	setStorage("delivery_asap_enabled", 0);
     }
 };
 
 initAddress = function(){
 	has_addressbook = $(".has_addressbook").val();
 	if(has_addressbook==1){
-		showPage('address_form_select.html');
+		if(isLocation()){
+		   showPage('address_form_select_location.html');
+		} else {
+		   showPage('address_form_select.html');
+		}
 	} else {
-		showPage('address_form.html');
+		if(isLocation()){
+			showPage('address_form_location.html');
+		} else {
+		   showPage('address_form.html');
+		}
 	}
 };
 
@@ -5394,6 +6399,10 @@ var isLogin = function(){
 var checkout = function(){
 		
 	transaction_type = $(".transaction_type").val();
+	if(empty(transaction_type)){
+		showToast( t("Please select transaction type") );
+		return;
+	}
 	
 	switch (transaction_type){
 		case "delivery":
@@ -5519,7 +6528,12 @@ var initPayment = function(){
 	switch (payment_provider){
 		case "cod":		 
 		  if (transaction_type=="delivery"){
-		  	 showPage("cod_forms.html");
+		  	 app_settings = getAppSettings();		  	 
+		  	 if(app_settings.cod_change_required==2){
+		  	    showPage("cod_forms.html");
+		  	 } else {
+		  	 	payNow();
+		  	 }
 		  } else {
 		  	 payNow();
 		  }
@@ -5544,9 +6558,9 @@ var initPayment = function(){
 submitCOD = function(){
 	$(".frm_cod_forms").validate({
    	    submitHandler: function(form) {
-   	    	payNow();
+   	    	payNow();   	    	
 		}
-   	});
+   	});   	
 	$(".frm_cod_forms").submit();
 };
 
@@ -5711,7 +6725,7 @@ payNowNextStep = function(data){
 			  	}
 		  });  
 		break;
-		
+				
 		default:
 		  showAlert( t("The payment method that you choose is not available in mobileapp") );
 		break;
@@ -5792,14 +6806,24 @@ nextStep = function(next_step){
 };
 
 skip = function(page_id){
-	if ( lat_res = getCurrentLocation()){		
-	    resetToPage('tabbar.html','slide',{
-	    	 lat : lat_res.lat,
-	  	   	 lng : lat_res.lng,
-	    });
+		
+	if(isLocation()){		
+		if ( location_res = getLocationData() ){			
+			resetToPage('tabbar.html','none');
+		} else {
+			showPage("select_location.html");
+		}		
 	} else {
-		showPage(page_id);
+		if ( lat_res = getCurrentLocation()){		
+		    resetToPage('tabbar.html','none',{
+		    	 lat : lat_res.lat,
+		  	   	 lng : lat_res.lng,
+		    });
+		} else {
+			showPage(page_id);
+		}	
 	}
+	
 };
 
 setAddressBook = function(){
@@ -5877,7 +6901,7 @@ actionSheetOrder = function(order_id, add_review, add_cancel, add_track){
 	}
 	
 	actions[5] = {
-		 label: t("Cancel"),
+		 label: t("Close"),
 		 icon: 'md-close'
 	};
 	
@@ -6036,9 +7060,15 @@ actionSheetBook = function(id){
   	   switch(index)
   	   {
   	   	 case 1:
-  	   	    showPage("address_book.html","none",{
-  	   	    	id:id
-  	   	    })
+  	   	    if(isLocation()){
+  	   	    	showPage("address_book_location.html","none",{
+	  	   	    	id:id
+	  	   	    });
+  	   	    } else {
+	  	   	    showPage("address_book.html","none",{
+	  	   	    	id:id
+	  	   	    });
+  	   	    }
   	   	 break;
   	   	 
   	   	 case 2:
@@ -6377,7 +7407,7 @@ ReCurrentLocation = function(){
     }, 100); 
 };
 
-setRecentSearch = function(address, lat, lng){
+setRecentSearch = function(address, lat, lng, street, city,  state, zipcode, location_name){
 	
 	if(empty(lat)){
 		showToast( t('invalid latitude') );
@@ -6400,12 +7430,33 @@ setRecentSearch = function(address, lat, lng){
 	   current_page_id = onsenNavigator.topPage.id;
 	   dump("current_page_id=>"+current_page_id);
 	   
+	   if(!empty(street)){
+	   	  $(".street").val(street);
+	   }
+	   if(!empty(city)){
+	   	  $(".city").val(city);
+	   }
+	   if(!empty(state)){
+	   	  $(".state").val(state);
+	   }
+	   if(!empty(zipcode)){
+	   	  $(".zipcode").val(zipcode);
+	   }
+	   if(!empty(location_name)){
+	   	  $(".location_name").val(location_name);
+	   }
 	   
     }, 100); 
 };
 
 ReSelectLocation = function(){
 	hideTooltip('.tooltip_home');
+	
+	if(isLocation()){
+		showPage("select_location.html");
+		return;
+	}
+			
 	current_latlng = getCurrentLocation();
    	if(!empty(current_latlng)){   	    	
    		showPage("map_select_location.html",'none',{
@@ -6464,30 +7515,29 @@ loadTabbar = function(next_step){
 	dump("tabbar =>"+ next_step);
 	switch (next_step){
 		case "map_select_location":
-		case "show_home_page":
-		  if ( lat_res = getCurrentLocation()){
-		  	   if(tabbar_loaded){		  
-		  	   	   dump('bringPageTopx');		  	   	   		  	   	    	 
-		  	   	   /*onsenNavigator.bringPageTop("tabbar.html",{
-				  	   animation : "none" ,  	
-				  	   callback : function(){				  	   	  
-				  	   	  processAjax("verifyCustomerToken",'action=account_menu');
-				  	   }
-				   });	  */
-		  	   	   resetToPage('tabbar.html','none');
-		  	   } else {
-		  	   	   onsenNavigator.resetToPage("tabbar.html",{
-				  	   animation : "slide" ,  	
-				  	   data : {
-				  	   	  lat : lat_res.lat ,
-				  	   	  lng : lat_res.lng ,
-				  	   	  location_address : lat_res.recent_search_address
-				  	   }
-				   });	  
-		  	   }
-		  } else {
-		  	  resetToPage( "map_select_location.html" );
-		  }
+		case "show_home_page":		   
+		   showHomeOrSelect();
+		  /*if(isLocation()){		  	  
+		  	  showHomeOrSelect();
+		  } else {		 
+			  if ( lat_res = getCurrentLocation()){
+			  	   if(tabbar_loaded){		  
+			  	   	   dump('bringPageTopx');		  	   	   
+			  	   	   resetToPage('tabbar.html','none');
+			  	   } else {
+			  	   	   onsenNavigator.resetToPage("tabbar.html",{
+					  	   animation : "slide" ,  	
+					  	   data : {
+					  	   	  lat : lat_res.lat ,
+					  	   	  lng : lat_res.lng ,
+					  	   	  location_address : lat_res.recent_search_address
+					  	   }
+					   });	  
+			  	   }
+			  } else {
+			  	  resetToPage( "map_select_location.html" );
+			  }
+		  }*/
 		break;
 		
 		case "payment_option":
@@ -6507,7 +7557,9 @@ loadTabbar = function(next_step){
 		break;
 				
 		default:
-		  resetToPage( "map_select_location.html" );
+		  //resetToPage( "map_select_location.html" );
+		  //showSelectLocation();
+		  showHomeOrSelect();
 		break;
 	}
 };
@@ -6926,9 +7978,9 @@ showDriverInfo = function(driver_id){
 
 runTrack = function(){
 	//10000
-   dump("runTrack");
+   dump("runTrack" + track_interval_timeout);
    setTimeout(function() {				     
- 	 track_interval = setInterval(function(){TrackDriver()}, 5000);	
+ 	 track_interval = setInterval(function(){TrackDriver()}, track_interval_timeout );	
    }, 400); 
 				  
 };
@@ -7190,7 +8242,7 @@ BookingListTab = function(tab, index){
 };
 
 hideTooltip = function(element){
-	$(element).webuiPopover('show');	
+	$(element).webuiPopover('hide');	
 	setStorage("tooltip_home",1);
 };
 
@@ -7218,6 +8270,7 @@ setStartupLanguage = function(lang_code){
 	
 	if(!empty(lang_code)){
 	   setStorage("client_set_lang", lang_code);
+	   InitRTL(lang_code);
 	}
 	
 	if(app_settings = getAppSettings()){
@@ -7227,7 +8280,7 @@ setStartupLanguage = function(lang_code){
         
         if(is_login==1 && !empty(lat)){
          	onsenNavigator.resetToPage("tabbar.html",{
-			   animation : "slide" ,  	
+			   animation : "none" ,  	
 			   data : {
 				  lat : lat,
 				  lng : lng,
@@ -7262,9 +8315,9 @@ setStartupLanguage = function(lang_code){
 };
 
 runTrackHistory = function(){
-   dump("runTrackHistory");
+   dump("runTrackHistory" + track_interval_timeout);      
    setTimeout(function() {				     
- 	 track_history_interval = setInterval(function(){ExecRunTrackHistory()}, 7000);	
+ 	 track_history_interval = setInterval(function(){ExecRunTrackHistory()}, track_interval_timeout );	
    }, 400); 
 };
 
@@ -7293,5 +8346,866 @@ applyFilterItem = function(){
    	processAjax('getItemByCategory', params , 'GET', 'skeleton2');
    	hideSheet();
 };
+
+function pad ( val ) { return val > 9 ? val : "0" + val; }
+
+enabledAsap = function(){
+	delivery_asap_enabled = getStorage("delivery_asap_enabled");	      
+    if(delivery_asap_enabled==1){
+        document.querySelector('#delivery_asap').checked = true;
+        $(".delivery_time").val('');
+    	$(".delivery_time_label").html('');
+    }
+};
+
+isLocation = function(){
+	if(app_settings = getAppSettings()){	
+		if(app_settings.search_mode=="location"){
+			return true;
+		}
+	}	
+	return false;
+};
+
+locationMode = function(){
+	if(app_settings = getAppSettings()){
+		if( !empty(app_settings.location_mode) ) {
+			return parseInt(app_settings.location_mode);
+		}
+	}
+	return 1;
+};
+
+getLocationData = function(){
+	location_mode = locationMode();
+	dump("getLocationData=>"+location_mode);
+	switch(location_mode)
+	{
+		case 1:
+		  pretty_address='';
+		  location_data_city = getStorage("location_data_city");
+		  location_data_area = getStorage("location_data_area");
+		  if(!empty(location_data_city) && !empty(location_data_area)){
+		  	  data_city = JSON.parse( location_data_city );	 
+		  	  data_area = JSON.parse( location_data_area );				  	  
+		  	  if(!empty(data_city.city_name)){
+		  	  	 pretty_address = data_city.city_name;
+		  	  }
+		  	  if(!empty(data_area.area_name)){
+		  	  	 pretty_address+= ", "+data_area.area_name;
+		  	  }
+		  	  if(data_city.city_id>0){
+			  	  return { 
+			  	   "city_id": data_city.city_id , 
+			  	   "city_name": data_city.city_name , 
+			  	   "country_id": data_city.country_id , 
+			  	   "country_name": data_city.country_name , 
+			  	   "state_id": data_city.state_id , 
+			  	   "state_name": data_city.state_name , 
+			  	   "area_id": data_area.area_id , 
+			  	   "area_name": data_area.area_name , 
+			  	   "location_mode":location_mode,
+			  	   'pretty_address':pretty_address
+			  	  };
+		  	  }
+		  }
+		break;
+		
+		case 2: 		  
+		  pretty_address='';
+		  location_data_state = getStorage("location_data_state");
+		  location_data_city = getStorage("location_data_city");		  		  
+		  if(!empty(location_data_state) && !empty(location_data_city)){
+  		  	  data_state = JSON.parse( location_data_state );				  	  
+		  	  data_city = JSON.parse( location_data_city );	 	
+		  	  dump(data_state); dump(data_city);
+		  	  if(!empty(data_state.state_name)){
+		  	  	 pretty_address = data_city.state_name;
+		  	  }
+		  	  if(!empty(data_city.city_name)){
+		  	  	 pretty_address+= ", "+data_city.city_name;
+		  	  }
+		  	  
+		  	  if(data_state.state_id>0){
+			  	  return { 
+			  	   "city_id": data_city.city_id , 
+			  	   "city_name": data_city.city_name , 
+			  	   "country_id": data_city.country_id , 
+			  	   "country_name": data_city.country_name , 
+			  	   "state_id": data_city.state_id , 
+			  	   "state_name": data_state.state_name , 
+			  	   /*"area_id": data_area.area_id , 
+			  	   "area_name": data_area.area_name , */
+			  	   "location_mode":location_mode,
+			  	   'pretty_address':pretty_address
+			  	  };
+		  	  }
+		  }
+		break;
+		 
+		case 3:		   
+		  pretty_address='';
+		  location_data_postal = getStorage("location_data_postal");		 
+		  if(!empty(location_data_postal)){
+		  	  data_postal = JSON.parse( location_data_postal );				
+		  	   
+		  	   if(!empty(data_postal.postal_code)){
+		  	  	 pretty_address = data_postal.postal_code;
+		  	  }
+		  	  if(!empty(data_postal.city_name)){
+		  	  	 pretty_address+= ", "+data_postal.city_name;
+		  	  }
+		  	    	  
+		  	   return { 
+			  	   "city_id": data_postal.city_id , 
+			  	   "city_name": data_postal.city_name , 
+			  	   "postal_code" : data_postal.postal_code,
+			  	   "country_id": data_postal.country_id , 
+			  	   "country_name": data_postal.country_name , 
+			  	   "state_id": data_postal.state_id , 
+			  	   "state_name": data_postal.state_name , 
+			  	   /*"area_id": data_area.area_id , 
+			  	   "area_name": data_area.area_name , */
+			  	   "location_mode":location_mode,
+			  	   'pretty_address':pretty_address
+			  	  };
+		  }
+		break;
+	}
+	
+	return false;
+};
+
+setState = function(state_name,state_id, country_id, country_name ){
+	is_address_book = $("#location_state .is_address_book").val();
+	location_mode = locationMode();
+	
+	popPage();	
+	
+	location_data = {
+		state_name :state_name,
+		state_id:state_id,
+		country_id:country_id,
+		country_name:country_name
+	};	
+	if(is_address_book==1){
+	   setStorage("location_data_state1", JSON.stringify(location_data) ); 
+	   removeStorage("location_data_city1");
+	   removeStorage("location_data_area1");
+	} else {
+	   setStorage("location_data_state", JSON.stringify(location_data) );  	
+	   if(location_mode==1){	   	
+	   } else if(location_mode==2){
+	   	  removeStorage("location_data_city2");
+	   }
+	}	
+};
+
+setCity = function(name, city_id, state_id, state_name, country_id, country_name){
+	is_address_book = $("#location_city .is_address_book").val();
+	
+	popPage();
+	
+	location_data = {
+		city_name :name,
+		city_id:city_id,
+		state_id:state_id,
+		state_name:state_name,
+		country_id:country_id,
+		country_name:country_name
+	};	
+	
+	if(is_address_book==1){
+		setStorage("location_data_city1", JSON.stringify(location_data) );  
+		removeStorage("location_data_area1");
+	} else {
+		setStorage("location_data_city2", JSON.stringify(location_data) );  
+	}	
+	
+};
+
+setArea = function(area_id, area_name){
+	is_address_book = $("#location_area .is_address_book").val();
+	popPage();
+	
+	location_data = {
+		area_id :area_id,
+		area_name:area_name,		
+	};	
+	
+	if(is_address_book==1){
+		setStorage("location_data_area1", JSON.stringify(location_data) );  
+	} else {
+		setStorage("location_data_area2", JSON.stringify(location_data) );  
+	}
+};
+
+setPostal = function(city_id, city_name, postal_code, state_id, state_name, country_id){
+	
+	is_address_book = $("#location_postal_code .is_address_book").val();
+	popPage();
+	
+	location_data = {
+		city_id :city_id,
+		city_name:city_name,		
+		postal_code: postal_code,
+		state_id:state_id,
+		state_name:state_name,
+		country_id:country_id
+	};	
+	
+	if(is_address_book==1){
+		setStorage("location_data_postal", JSON.stringify(location_data) );  
+	} else {
+		setStorage("location_data_postal2", JSON.stringify(location_data) );  
+	}
+	
+};
+
+q = function(data){
+	return "'" + addslashes(data) + "'";
+};
+
+clickFormat = function(data){
+	json = data.split("|");
+	params ='';
+	if(json.length>0){
+		$.each(json, function(key, val){
+			params+= q(val)+",";
+		});
+	}
+	if(!empty(params)){
+		lent = parseInt(params.length)-1;
+		return params.substr(0, lent);
+	}	
+	return '';
+}
+
+
+setLocationData = function(){
+	location_mode = locationMode();
+	switch(location_mode){
+		case 1:
+		  city_id = $("#select_location .city_id").val();
+		  area_id = $("#select_location .area_id").val();
+		  if(empty(city_id)){
+		  	 showToast( t("City is required") );	
+		  	 return;
+		  }
+		  if(empty(area_id)){
+		  	 showToast( t("Area is required") );	
+		  	 return;
+		  }
+		  
+		 data_city = getStorage("location_data_city2");	
+		 data_area = getStorage("location_data_area2");	
+		 
+		 setStorage("location_data_city",data_city);
+		 setStorage("location_data_area",data_area);		  		  		  		 	
+		break
+		
+		case 2:
+		
+		  state_id = $("#select_location .state_id").val();
+		  city_id = $("#select_location .city_id").val();
+		  
+		  if(empty(state_id) || state_id<1){
+		  	 showToast( t("State is required") );	
+		  	 return;
+		  }
+		  
+		  if(empty(city_id) || city_id<1){
+		  	 showToast( t("City is required") );	
+		  	 return;
+		  }		  
+		  
+		  data_state = getStorage("location_data_state");	
+		  data_city = getStorage("location_data_city2");			  
+		 
+		  setStorage("location_data_state",data_state);
+		  setStorage("location_data_city",data_city);	
+		break
+		
+		case 3:
+
+		  state_id = $("#select_location .state_id").val();
+		  city_id = $("#select_location .city_id").val();
+		  
+		  if(empty(city_id) || city_id<1){
+		  	 showToast( t("Postal Code/Zip Code is required") );	
+		  	 return;
+		  }		   		
+
+		  data_postal = getStorage("location_data_postal2");
+		  setStorage("location_data_postal",data_postal);
+		
+		break
+		
+		default:
+		  showToast( t("Undefined location mode") );	
+		break
+	}
+	
+	 if(tabbar_loaded){
+	 	popPage();	               	  
+   	    params = "search_type=byLatLong";	
+        processDynamicAjax('searchMerchant', params , 'search_results_wrapper');   	    	   	    	
+        loadHomePage();
+	 } else {
+	 	onsenNavigator.resetToPage("tabbar.html",{
+	  	   animation : "none" ,  	
+	  	   data : {
+	  	   	  lat : '' ,
+	  	   	  lng : '' ,
+	  	   	  location_address : ''
+	  	   }
+	   });	  
+	 }		  
+		 
+};
+
+setCurrentAddress = function(){
+	if(isLocation()){
+   	   location_res = getLocationData();
+   	   $(".print_location_address").html( location_res.pretty_address );
+   	} else {
+	   current_latlng = getCurrentLocation();
+	   $(".print_location_address").html( current_latlng.address );
+   	}
+};
+
+showHomeOrSelect = function(){
+	dump("showHomeOrSelect=>");
+	if(isLocation()){
+		location_mode = locationMode();
+		location_data = getLocationData();
+		dump("location_modex=>"+location_mode);
+		switch(location_mode){
+			case 1:
+			  if(location_data){			  	
+			  	resetToPage('tabbar.html','none',{
+		  			 lat : 0,
+		  			 lng : 0,
+		  		});
+			  } else {
+			  	 resetToPage( "select_location.html",'lift' );
+			  }
+			break;
+						
+			default:
+			  resetToPage( "select_location.html" );
+			break;
+		}
+	} else {
+		if ( lat_res = getCurrentLocation()){	        	  		
+	  		resetToPage('tabbar.html','none',{
+	  			 lat : lat_res.lat,
+	  			 lng : lat_res.lng,
+	  		});
+	  	} else {	        	  			        	  	
+    	    resetToPage( "map_select_location.html" );
+	  	}
+	}
+};
+
+showSelectLocation = function(){
+	if(isLocation()){
+		location_mode = locationMode();			
+		switch(location_mode){
+			case 1:
+			  resetToPage( "select_location.html" );
+			break;
+			
+			case 2:
+			break;
+			
+			case 3:
+			break;
+			
+			default:
+			  resetToPage( "select_location.html" );
+			break;
+		}
+	} else {
+		resetToPage( "map_select_location.html" );
+	}
+};
+
+switchAddressBook = function(){
+	if(isLocation()){
+		showPage('address_book_location.html');
+	} else {
+		showPage('address_book.html');
+	}
+};
+
+showLocationCity = function(){
+	state_id = $('.state_id').val();
+	if(!empty(state_id)){
+		showPage("location_city.html",'none',{
+			address_book:1,
+			state_id : state_id
+		});
+	} else {
+		showToast( t("Select State") );	
+	}
+};
+
+showLocationArea = function(){
+	city_id = $(".city_id").val();
+	if(!empty(city_id)){
+		showPage('location_area.html','none',{
+			address_book:1,
+			city_id : city_id
+		});
+	} else {
+		showToast( t("Select City first") );	
+	}
+};
+
+showLocationArea2 = function(){
+	city_id = $(".city_id").val();
+	if(!empty(city_id)){
+		showPage('location_area.html','none',{
+			address_book:0,
+			city_id : city_id
+		});
+	} else {
+		showToast( t("Select City first") );	
+	}
+};
+
+var setDeliveryLocation = function(){
+	$(".frm_address_form_location").validate({
+   	    submitHandler: function(form) {
+   	    	var params = $( ".frm_address_form_location").serialize();
+   	    	params+="&merchant_id=" + getActiveMerchantID();
+   	    	processAjax('setDeliveryLocation', params );
+		}
+   	});
+	$(".frm_address_form_location").submit();
+};
+
+setAddressBookLocation = function(){
+	$(".frm_address_form_select_location").validate({
+   	    submitHandler: function(form) {   	
+   	    	
+   	    	setStorage("customer_number", $(".contact_phone").val() );
+   	    	
+   	    	var params = $( ".frm_address_form_select_location").serialize();
+   	    	params+= "&merchant_id=" + getActiveMerchantID();
+   	    	processAjax('setAddressBookLocation', params ); 
+		}
+   	});
+	$(".frm_address_form_select_location").submit();
+};
+
+fillAddressForm = function(){
+	dump('fillAddressForm');
+	if ( location_res = getLocationData() ){
+		dump(location_res);
+		switch(location_res.location_mode){
+			case 1:			 
+			
+			 $.each( location_res  , function( key, val ) {
+			 	setValue("#address_form_location ."+key, val);	
+			 });
+			
+			 data_state = {
+				state_name :location_res.state_name,
+				state_id:location_res.state_id,
+				country_id:location_res.country_id,
+				country_name:location_res.country_name
+			  };	
+			  setStorage("location_data_state1", JSON.stringify(data_state) ); 
+			  
+			   data_city = {
+				city_name :location_res.city_name,
+				city_id: location_res.city_id,
+				state_id: location_res.state_id,
+				country_id: location_res.country_id
+			  };	
+			  setStorage("location_data_city1", JSON.stringify(data_city) ); 
+				  
+			  data_area = {
+					area_id : location_res.area_id,
+					area_name: location_res.area_name,		
+		      };	
+		      setStorage("location_data_area1", JSON.stringify(data_area) ); 
+			  
+			break;
+			
+			case 2:
+			break;
+			
+			case 3:
+			break;
+		}
+	}
+};
+
+recheckLocationMap = function(element){
+	$(element).webuiPopover('hide');	
+	current_latlng = getCurrentLocation();
+   	if(!empty(current_latlng)){   	    	
+   		showPage("map_select_location.html",'none',{
+   			lat : current_latlng.lat,
+   			lng : current_latlng.lng
+   		});
+   	} else {
+   		showPage("map_select_location.html",'none');
+   	}
+};
+
+recheckLocationClose = function(element){
+	$(element).webuiPopover('hide');
+	setStorage("recheck_location",1);
+};
+
+recheckLocation = function(){
+	
+	tooltip_home = getStorage("tooltip_home");
+	recheck_location = getStorage("recheck_location");
+	
+	if(!empty(tooltip_home && empty(recheck_location))){
+		setTimeout(function() {		 
+			 close_button='<ons-button modifier="bluebutton_small" onclick="recheckLocationClose(\'.tooltip_home\');" >';
+			 close_button+=t("NO, THANKS");
+			 close_button+='</ons-button>';
+			 
+			 enabled_button='<ons-button modifier="whitebutton_small" onclick="recheckLocationMap(\'.tooltip_home\');" >';
+			 enabled_button+=t("ENABLED LOCATION");
+			 enabled_button+='</ons-button>';
+			 
+			 $('.tooltip_home').webuiPopover({   	     	
+		     	content:'<p>'+t('Where are you?')+'</p><p class="small">'+t('Enabled your location to find fantastic food nearby')+'</p><br/>'+ close_button + enabled_button,
+		     	backdrop:false,	     	
+		     	offsetLeft:90
+		   	});
+		   	$('.tooltip_home').webuiPopover('show');   	
+	   	}, 1000); 
+	}
+	
+	return;
+	
+	if( isdebug() ){
+		
+		setTimeout(function() {									
+		
+			GMaps.geolocate({
+				success: function(position) {
+					re_your_lat = position.coords.latitude;
+		  	        re_your_lng = position.coords.longitude;
+		  	        //alert(re_your_lat+"=>"+re_your_lng);	  	        
+		  	        if ( lat_res = getCurrentLocation()){
+		  	        	//alert(lat_res.lat+"==="+lat_res.lng);
+		  	        	data_recheck = "new_lat="+ re_your_lat;
+		  	        	data_recheck+= "&new_lng="+ re_your_lng;
+		  	        	data_recheck+= "&old_lat="+ lat_res.lat;
+		  	        	data_recheck+= "&old_lng="+ lat_res.lng;	  	        	
+		  	        	processDynamicAjax('recheckLocation', data_recheck );
+		  	        }
+		  	        
+				},
+				error: function(error) {
+			     showToast('Geolocation failed: '+error.message);
+			    },
+			    not_supported: function() {
+			      showToast("Your browser does not support geolocation");
+			    },
+			    always: function() {	    
+			      showLoader(false);
+			    }
+			});
+		
+		}, 1500); 
+	}
+};
+
+getCartTheme = function(){
+	cart_theme = 1;
+	if(app_settings = getAppSettings()){	
+		if(!empty(app_settings.cart_theme)){
+			if(app_settings.cart_theme>0){
+		       cart_theme = app_settings.cart_theme;
+			}
+		}
+	} 
+	return cart_theme;
+};
+
+setCartTheme = function(){	
+	cart_theme = getCartTheme();			
+	switch(cart_theme){
+		case "2":		  
+		  $("ons-fab.cart_fab").remove();
+		  html_basket_count = $(".basket_count").html();
+		  if(empty(html_basket_count)){
+		     $(".basket_count").html('<ons-icon icon="md-spinner" size="13px" spin></ons-icon>');
+		     $(".basket_total").html('<ons-icon icon="md-spinner" size="13px" spin></ons-icon>');
+		  }
+		break;
+		
+		default:		 		  
+		  $("ons-bottom-toolbar.basket_toolbar").remove();
+		  $("ons-fab.fab_floating_category").remove();
+		break;
+	}
+	
+};
+
+setBasket = function(data){
+	$(".basket_count").html(data.basket_count);
+	$(".basket_total").html(data.basket_total);
+	setStorage("basket_count", data.basket_count);
+	setStorage("basket_total", data.basket_total);
+};
+
+ReSetBasket = function(){
+	cart_theme = getCartTheme();
+	if(cart_theme==2){		
+		basket_count = getStorage("basket_count");
+		basket_total = getStorage("basket_total");
+		if(!empty(basket_count)){
+			setBasket({
+				basket_count:basket_count,
+				basket_total:basket_total
+			});
+		} else {		
+			getCartCount();
+		}
+	} else {
+		getCartCount();
+	}
+};
+
+clearBasket = function(){
+  cart_theme = getCartTheme();
+  if(cart_theme==2){
+  	 setBasket({
+  	 	basket_count:"",
+  	 	basket_total:""
+  	 });
+  }    
+};
+
+showFloatingCategory = function(){
+   destroyList('floating_category_list');
+   fab_dialog = document.getElementById('floating_category');
+   if (fab_dialog) {
+   	   setFloatingCategory('floating_category_list');
+       fab_dialog.show();
+   } else {
+    ons.createElement('floating_category.html', { append: true })
+      .then(function(fab_dialog) {
+         setFloatingCategory('floating_category_list');
+         fab_dialog.show();
+      });
+   }
+};
+
+showItemPageFloating = function(cat_id, page_type){
+	document.getElementById("floating_category").hide();
+	if(page_type=="1"){
+	  showItemPage(cat_id);
+	} else {
+	  reloadItemPage(cat_id);	
+	}
+}
+
+setCloseMerchant = function(){
+	cart_theme = getCartTheme();
+	merchant_open_status = $("#restaurant_page .merchant_open_status").val();	
+	if(merchant_open_status=="close"){
+
+	  current_page_id = onsenNavigator.topPage.id;
+	  switch(current_page_id){
+	  	case "item_details":
+	  	   $("ons-bottom-toolbar ons-button").attr("disabled",true);	
+	  	break;
+	  }	  
+		
+	  if(cart_theme==2){
+	     $('.basket_toolbar ons-button').attr("disabled",true);
+	  }
+	}
+};
+
+
+/*1.4*/
+initStartUpBanner = function(){
+	interval = 3000;
+	if(app_settings = getAppSettings()){    	
+    	if(app_settings.startup.startup_auto_scroll==1){    		
+    		interval = parseInt(app_settings.startup.startup_interval)+0;        		
+    		if(interval<=0){
+			   interval = 3000;
+			}
+			if (isNaN(interval)){
+				interval = 3000;
+			}					
+			startup_banner_interval = setInterval(function(){AutoStartUpBanner()}, interval );    		 	
+    	}
+    }
+};
+
+AutoStartUpBanner = function(){
+	dump("StartUpBannerAutoScroll");
+	var total_banner = 0;
+	var startup_banner_index = $(".startup_banner_index").val();
+	startup_banner_index = parseInt(startup_banner_index)+0;
+	if(settings = getAppSettings()){
+		total_banner  = app_settings.startup.banner.length;
+		total_banner = parseInt(total_banner)-1;
+	}
+	dump("total_banner=>"+total_banner);
+	var scroll_banner = document.getElementById('startup_carousel');
+		
+	if(startup_banner_index>=total_banner){
+	   scroll_banner.setActiveIndex(0);
+	   $(".startup_banner_index").val(0);
+	} else {	
+	   scroll_banner.next();
+	}
+};
+
+StopStartUpBanner = function(){
+    dump("StopStartUpBanner");
+	clearInterval(startup_banner_interval);	  
+};
+
+
+/*1.4*/
+
+preCheckout = function(){
+	
+	transaction_type = $(".transaction_type").val();
+	if(empty(transaction_type)){
+		showToast( t("Please select transaction type") );
+		return;
+	}
+	
+	switch (transaction_type){
+		case "delivery":
+		  var street = $(".delivery_address").val();
+		  if(empty(street)){
+		  	 showAlert( t("Please enter delivery address") );
+		  	 return ;
+		  }
+		  
+		  var delivery_asap_val = false;
+		  var delivery_asap = document.getElementById('delivery_asap');		  		  
+		  if(!empty(delivery_asap)){
+		  	  delivery_asap_val = delivery_asap.checked;
+		  }
+		  
+		  //alert(delivery_asap_val);
+		  
+		  required_delivery_time = $(".required_delivery_time").val();
+		  if(required_delivery_time==1 && delivery_asap_val == false){
+		  	  delivery_time_set = getStorage("delivery_time_set");		  
+			  if(empty(delivery_time_set)){
+			  	 showAlert( t("Delivery time is required") );
+			  	 return;
+			  }
+		  }
+		  
+		  /*CHECK MINIMUM ORDER TABLE*/
+		  min_delivery_order = parseFloat($(".min_delivery_order").val());		  
+		  //alert(min_delivery_order);
+		  if(min_delivery_order>0.0001){
+		  	 cart_sub_total = parseFloat($(".cart_sub_total").val());		  	 
+		  	// alert(cart_sub_total);
+		  	 if(min_delivery_order>cart_sub_total){
+		  	 	showAlert( t("Sorry but Minimum order is") +" "+ prettyPrice(min_delivery_order) );
+			  	return;
+		  	 }
+		  }
+		  
+		break;
+		
+		case "pickup":
+		  delivery_time_set = getStorage("delivery_time_set");		  
+		  if(empty(delivery_time_set)){
+		  	 showAlert( t("Pickup time is required") );
+		  	 return;
+		  }
+		break;
+		
+		case "dinein":
+		  delivery_time_set = getStorage("delivery_time_set");		  
+		  if(empty(delivery_time_set)){
+		  	 showAlert( t("Dine in time is required") );
+		  	 return;
+		  }
+		break;
+	}	
+	
+	var params  = '';
+	params = "transaction_type="+transaction_type;	
+		
+	delivery_date_set = getStorage("delivery_date_set");
+	if(!empty(delivery_date_set)){
+	   params +='&delivery_date=' + delivery_date_set;
+	}
+	
+	delivery_time_set = getStorage("delivery_time_set");
+	if(!empty(delivery_time_set)){
+	   params +='&delivery_time=' + delivery_time_set;	
+	}
+	
+	params+="&merchant_id=" + getActiveMerchantID();
+	
+	processAjax("preCheckout", params );
+	
+};
+
+InitRTL = function(code){	
+	if(!empty(code)){
+		if(app_settings = getAppSettings()){
+			lang_rtl = app_settings.lang_rtl;			
+			if(lang_rtl.length>0){
+				if(in_array(code, lang_rtl)){
+					$("body").addClass("RTL");
+					return;
+				} 
+			}
+		}	
+	}
+	$("body").removeClass("RTL");
+};
+
+isRTL = function(code){
+	if(!empty(code)){
+		if(app_settings = getAppSettings()){
+			lang_rtl = app_settings.lang_rtl;			
+			if(lang_rtl.length>0){
+				if(in_array(code, lang_rtl)){					
+					return true;
+				} 
+			}
+		}	
+	}
+	return false;
+}
+
+function in_array(needle, haystack, argStrict) {
+    var key = '', strict = !!argStrict;
+    if (strict) {
+        for (key in haystack) {
+            if (haystack[key] === needle) {
+                return true;
+            }
+        }
+    }
+    else {
+        for (key in haystack) {
+            if (haystack[key] == needle) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 /*END OF SCRIPT*/
