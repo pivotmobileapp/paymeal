@@ -1695,7 +1695,9 @@ var displayCartDetails = function(datas){
 		   html+= twoColumn( t('Delivery Fee') ,  prettyPrice(data.total.delivery_charges) );
 		}
 	}
+	
 	/*SERVICE FEE*/
+	
 	if (!empty(data.total.service_fee_value)){
 			if(data.total.service_fee_value>0.0001){
 				var per = data.total.service_fee_percentage.replace('%','');
